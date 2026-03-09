@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoreo LABSIS LAPI — Dynamtek</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-title">Monitoreo Infraestructura <span>LABSIS LAPI</span> — Dynamtek</div>
+    <div class="header-status">
+      <span><span class="status-dot loading" id="conn-dot"></span><span id="conn-text">Conectando...</span></span>
+      <span id="last-update">—</span>
+      <button class="theme-toggle" id="theme-toggle" title="Cambiar tema claro/oscuro">☀️</button>
+      <span class="user-badge" id="user-badge" style="display:none">
+        <span id="user-name"></span>
+        <span class="user-role-badge" id="user-role-badge"></span>
+        <button class="logout-btn" id="logout-btn" title="Cerrar sesión">Salir</button>
+      </span>
+    </div>
+  </header>
+
+  <!-- Barra de filtros de fecha -->
+  <div class="filter-bar">
+    <div class="filter-pills">
+      <button class="filter-pill active" data-range="24h">24h</button>
+      <button class="filter-pill" data-range="7d">7 días</button>
+      <button class="filter-pill" data-range="30d">30 días</button>
+    </div>
+    <div class="filter-custom">
+      <label>Desde:</label>
+      <input type="date" id="filter-from">
+      <label>Hasta:</label>
+      <input type="date" id="filter-to">
+      <button class="filter-apply" id="filter-apply-btn">Aplicar</button>
+    </div>
+    <button class="filter-compare" id="compare-btn" title="Comparar con otro período">Comparar</button>
+    <button class="filter-export" id="export-btn" title="Exportar datos del rango actual como CSV">Exportar CSV</button>
+  </div>
+
+  <main class="main">
+
+    <!-- Cards resumen -->
+    <div class="cards-grid" id="cards-grid"></div>
+
+    <!-- Tabs -->
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="health">Salud</button>
+      <button class="nav-tab" data-tab="servers">Servidores</button>
+      <button class="nav-tab" data-tab="jboss">JBoss</button>
+      <button class="nav-tab" data-tab="database">Base de Datos</button>
+      <button class="nav-tab" data-tab="infra">Infraestructura</button>
+      <button class="nav-tab" data-tab="queries">Queries BD</button>
+      <button class="nav-tab" data-tab="actions">Acciones</button>
+      <button class="nav-tab" data-tab="reports">Reportes</button>
+    </div>
+
+    <!-- TAB: Salud del Sistema -->
+    <div class="tab-panel active" id="tab-health">
+      <div id="health-panel">
+        <div class="no-data">Cargando estado del sistema...</div>
+      </div>
+      <div class="logs-card" style="margin-top:20px">
+        <div class="chart-header">
+          <div class="chart-title">Eventos Recientes</div>
+          <div class="chart-desc">Log automático de cambios detectados: spikes de CPU, transacciones zombie, bloqueos, cambios en cache hit, etc.</div>
+        </div>
+        <div id="health-timeline"></div>
+      </div>
+    </div>
+
+    <!-- TAB: Servidores -->
+    <div class="tab-panel" id="tab-servers">
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">CPU — Servidor El 18 <span class="ip-badge">18.224.139.66</span></div>
+            <div class="chart-desc">Qué tan ocupado está el procesador. Si la zona coloreada llega al 70%, el servidor empieza a ir lento. Arriba de 85% ya es crítico y los usuarios lo notan.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-cpu-el18"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">CPU — Servidor El 3 <span class="ip-badge">3.135.64.52</span></div>
+            <div class="chart-desc">Mismo indicador para El 3. Si ves mucho rojo (steal), significa que Amazon le está quitando capacidad al servidor. Si sube arriba de 5%, hay que pedir más recursos.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-cpu-el316"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Memoria RAM — Servidor El 18 <span class="ip-badge">18.224.139.66</span></div>
+            <div class="chart-desc">Cuánta memoria tiene disponible el servidor (32 GB en total). Lo <b style="color:#ef4444">rojo</b> = en uso, lo <b style="color:#06b6d4">azul claro</b> = reserva del sistema, lo <b style="color:#10b981">verde</b> = libre. Si lo rojo pasa del 85%, el servidor puede volverse lento.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-mem-el18"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Memoria RAM — Servidor El 3 <span class="ip-badge">3.135.64.52</span></div>
+            <div class="chart-desc">Memoria del servidor El 3. La aplicación LABSIS tiene 24 GB de heap asignados. Si la memoria en uso (rojo) pasa del 85%, no queda espacio para manejar picos de trabajo.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-mem-el316"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: JBoss -->
+    <div class="tab-panel" id="tab-jboss">
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Memoria de la Aplicación LABSIS (JBoss)</div>
+            <div class="chart-desc">Cuánta memoria consume la aplicación LABSIS en cada servidor. El 18 tiene límite de 12 GB y El 3 tiene límite de 24 GB. Si se acerca al límite, la aplicación se vuelve lenta porque tiene que liberar memoria constantemente.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-jboss-rss"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Peticiones Simultáneas (Threads)</div>
+            <div class="chart-desc">Cuántos usuarios están siendo atendidos al mismo tiempo. Si sube a más de 200, el sistema no puede atender a todos y los usuarios experimentan lentitud o errores.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-jboss-threads"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">CPU del Proceso LABSIS (%)</div>
+            <div class="chart-desc">Qué porcentaje del CPU consume únicamente la aplicación LABSIS. Si los threads suben pero el CPU de JBoss no, los threads están esperando respuesta de la base de datos (I/O bound).</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-jboss-cpu"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Conexiones de Usuarios — El 18 <span class="ip-badge">18.224.139.66</span></div>
+            <div class="chart-desc"><b style="color:#10b981">Verde</b> = usuarios conectados trabajando. <b style="color:#f59e0b">Amarillo</b> = desconectándose (normal). <b style="color:#ef4444">Rojo</b> = conexiones atoradas que no se cierran.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-tcp8080-el18"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div class="chart-title">Conexiones de Usuarios — El 3 <span class="ip-badge">3.135.64.52</span></div>
+            <div class="chart-desc">Misma vista para El 3. Si ves barras rojas creciendo, significa que hay conexiones atoradas que el sistema no puede cerrar.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-tcp8080-el316"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Base de Datos -->
+    <div class="tab-panel" id="tab-database">
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Conexiones a la Base de Datos</div>
+            <div class="chart-desc"><b style="color:#10b981">Verde</b> = trabajando activamente. <b style="color:#3b82f6">Azul</b> = disponibles esperando (normal). <b style="color:#ef4444">Rojo</b> = transacciones abandonadas que bloquean la base de datos. <b>El rojo siempre debe ser 0.</b></div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-db-conns"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Eficiencia de Memoria de la Base de Datos</div>
+            <div class="chart-desc">Qué tan rápido responde la base de datos. <b>Lo ideal es 99% o más.</b> Si baja de 95%, la base de datos tiene que buscar información en el disco duro en vez de la memoria, y eso es 100 veces más lento.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-cache-hit"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Operaciones Lentas en la Base de Datos</div>
+            <div class="chart-desc"><b style="color:#ef4444">Barras rojas</b> = cantidad de operaciones que tardan más de 30 segundos (ideal: 0). <b style="color:#f59e0b">Área amarilla</b> = cuánto tiempo lleva la operación más lenta. <b>Si la línea amarilla sube sin parar, hay una transacción "zombie" atorada que necesita ser terminada.</b></div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-slow-queries"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Bloqueos en la Base de Datos</div>
+            <div class="chart-desc"><b style="color:#ef4444">Barras rojas</b> = operaciones que están atoradas esperando a que otra termine. <b style="color:#f59e0b">Barras amarillas</b> = conexiones que la app abrió y no cerró ("transacciones abandonadas"). <b>Ambos deben estar en 0.</b></div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-locks"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Velocidad de la Base de Datos</div>
+            <div class="chart-desc"><b style="color:#10b981">Verde</b> = operaciones completadas con éxito por segundo. <b style="color:#ef4444">Rojo</b> = operaciones que fallaron. Si la línea roja sube, hay errores en el sistema que están afectando a los usuarios.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-tps"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Conexiones de Servidores a la Base de Datos</div>
+            <div class="chart-desc">Cuántas conexiones tiene cada servidor hacia la base de datos. Si un servidor acapara muchas, puede dejar al otro sin espacio para trabajar. El límite recomendado es 60 por servidor.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-tcp5432"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Deadlocks (Conflictos de Transacciones)</div>
+            <div class="chart-desc">Cuántas veces dos procesos se bloquearon mutuamente y PostgreSQL tuvo que matar uno. <b>Lo ideal es 0.</b> Si sube, hay bugs de concurrencia en la aplicación que el equipo de desarrollo debe corregir.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-deadlocks"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Archivos Temporales de BD</div>
+            <div class="chart-desc">Cuando un query necesita más memoria de la asignada (work_mem), genera archivos temporales en disco. Esto es <b>mucho más lento</b>. Si sube, hay queries que necesitan optimización o más work_mem.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-temp-files"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Heatmap de carga -->
+      <div class="charts-row">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div class="chart-title">Mapa de Calor — Patrones de Carga por Hora y Día</div>
+            <div class="chart-desc">Muestra en qué horarios y días la base de datos tiene más carga. Útil para identificar ventanas de mantenimiento y patrones recurrentes. <b>Rojo = alta carga, Verde = baja carga.</b></div>
+          </div>
+          <div class="heatmap-controls">
+            <select id="heatmap-metric" onchange="loadHeatmap()">
+              <option value="active_conns">Conexiones activas</option>
+              <option value="idle_in_tx_conns">Transacciones zombie</option>
+              <option value="cache_hit_table_pct">Cache Hit %</option>
+              <option value="total_connections">Conexiones totales</option>
+              <option value="tps_commit">Transacciones/seg</option>
+              <option value="waiting_locks">Bloqueos</option>
+              <option value="queries_gt_30s">Queries >30s</option>
+              <option value="blk_read_rate">I/O Lectura BD</option>
+              <option value="blk_write_rate">I/O Escritura BD</option>
+            </select>
+          </div>
+          <div style="position:relative">
+            <canvas id="heatmap-canvas" width="800" height="220"></canvas>
+            <div class="heatmap-tooltip" id="heatmap-tooltip"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Infraestructura -->
+    <div class="tab-panel" id="tab-infra">
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Carga General del Sistema</div>
+            <div class="chart-desc">Qué tan saturados están los servidores. Los servidores tienen capacidad para 8 tareas simultáneas. Si la línea pasa de 8, el servidor está sobrecargado. Si pasa de 16, es una saturación severa.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-load"></canvas></div>
+        </div>
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div class="chart-title">Espacio en Disco</div>
+            <div class="chart-desc">Cuánto espacio queda en los discos de cada servidor. <b style="color:#10b981">Verde</b> = bien. <b style="color:#f59e0b">Amarillo</b> = queda poco. <b style="color:#ef4444">Rojo</b> = urgente, si se llena el disco el servidor se detiene por completo.</div>
+          </div>
+          <div id="disk-gauges" class="gauge-grid"></div>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Actividad de Disco (I/O)</div>
+            <div class="chart-desc">Cuántos datos leen y escriben los servidores en disco. Picos altos pueden indicar: backups en ejecución, queries pesados que leen mucha data, o logs creciendo demasiado.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-disk-io"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">Tráfico de Red</div>
+            <div class="chart-desc">Cuántos datos entran y salen de los servidores por la red. Picos anormales pueden indicar: exports masivos de datos, sincronización, o tráfico inusual.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-network"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Timeline de eventos -->
+      <div class="logs-card">
+        <div class="chart-header">
+          <div class="chart-title">Timeline de Eventos</div>
+          <div class="chart-desc">Registro cronológico de todos los eventos detectados automáticamente. Útil para post-mortem y entender qué pasó.</div>
+        </div>
+        <div id="infra-timeline"></div>
+      </div>
+
+      <!-- Logs -->
+      <div class="logs-card" style="margin-top:16px">
+        <div class="chart-header">
+          <div class="chart-title">Logs del Sistema (Queries PostgreSQL)</div>
+          <div class="chart-desc">Eventos detectados directamente desde PostgreSQL: operaciones lentas, bloqueos entre procesos, y conexiones abandonadas.</div>
+        </div>
+        <div class="log-tabs-row">
+          <button class="log-tab active" onclick="showLog('slow', this)">Queries Lentas</button>
+          <button class="log-tab" onclick="showLog('locks', this)">Bloqueos</button>
+          <button class="log-tab" onclick="showLog('idle-tx', this)">Transacciones Idle</button>
+        </div>
+        <pre class="log-content" id="log-content">Cargando logs...</pre>
+      </div>
+    </div>
+
+    <!-- TAB: Queries BD -->
+    <div class="tab-panel" id="tab-queries">
+      <div class="queries-header">
+        <div>
+          <div class="chart-title">Queries Más Costosos (pg_stat_statements)</div>
+          <div class="chart-desc" id="queries-subtitle">Los queries que más tiempo acumulan en la base de datos. Se actualiza cada 5 minutos.</div>
+        </div>
+        <button class="filter-export" onclick="exportQueries()">Exportar CSV</button>
+      </div>
+      <div id="queries-table-container">
+        <div class="no-data">Cargando queries...</div>
+      </div>
+    </div>
+
+    <!-- TAB: Acciones -->
+    <div class="tab-panel" id="tab-actions">
+      <div class="chart-title" style="margin-bottom:4px">Centro de Acciones</div>
+      <div class="chart-desc" style="margin-bottom:20px">Ejecuta diagnósticos y acciones correctivas directamente desde el dashboard. Las acciones peligrosas requieren confirmación. Todo queda registrado en el log de auditoría.</div>
+      <div id="actions-catalog">
+        <div class="no-data">Cargando acciones...</div>
+      </div>
+      <div class="audit-section">
+        <div class="audit-header">
+          <h3>Log de auditoría</h3>
+          <div class="audit-filters" id="audit-filters"></div>
+        </div>
+        <div id="actions-audit">
+          <div class="no-data">Sin ejecuciones registradas</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Reportes -->
+    <div class="tab-panel" id="tab-reports">
+      <div class="chart-title" style="margin-bottom:4px">Reportes para Entrega</div>
+      <div class="chart-desc" style="margin-bottom:20px">Genera reportes semanales listos para entregar al equipo de LAPI. Incluye disponibilidad, métricas de servidores, BD, incidentes y acciones de mantenimiento. Abre el reporte y usa Ctrl+P para guardarlo como PDF.</div>
+      <div id="reports-container">
+        <div class="no-data">Cargando reportes...</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal para expandir gráficas -->
+  <div class="chart-modal-overlay" id="chart-modal" style="display:none" onclick="closeChartModal(event)">
+    <div class="chart-modal">
+      <div class="chart-modal-header">
+        <div class="chart-modal-title" id="modal-title"></div>
+        <button class="chart-modal-close" onclick="closeChartModal()">&times;</button>
+      </div>
+      <div class="chart-modal-body">
+        <canvas id="modal-chart"></canvas>
+      </div>
+      <div class="chart-modal-diag" id="modal-diag"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/cards.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/health.js"></script>
+  <script src="js/actions.js"></script>
+  <script src="js/runbooks.js"></script>
+  <script src="js/timeline.js"></script>
+  <script src="js/queries-tab.js"></script>
+  <script src="js/heatmap.js"></script>
+  <script src="js/reports.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>

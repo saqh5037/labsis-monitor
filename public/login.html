@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Monitoreo LABSIS LAPI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #edf2ff;
+      background-image:
+        radial-gradient(ellipse 600px 400px at 15% 10%, rgba(59,130,246,0.22) 0%, transparent 70%),
+        radial-gradient(ellipse 500px 500px at 85% 20%, rgba(139,92,246,0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 700px 300px at 50% 50%, rgba(14,165,233,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 400px 600px at 20% 80%, rgba(168,85,247,0.15) 0%, transparent 70%),
+        radial-gradient(ellipse 500px 400px at 80% 70%, rgba(59,130,246,0.18) 0%, transparent 70%),
+        radial-gradient(ellipse 300px 300px at 60% 30%, rgba(6,182,212,0.10) 0%, transparent 60%);
+      background-attachment: fixed;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: rgba(255,255,255,0.55);
+      backdrop-filter: blur(24px) saturate(200%);
+      -webkit-backdrop-filter: blur(24px) saturate(200%);
+      border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 24px;
+      padding: 48px 40px 40px;
+      box-shadow:
+        0 8px 32px rgba(30,58,95,0.12),
+        0 1px 3px rgba(30,58,95,0.04),
+        inset 0 1px 0 rgba(255,255,255,0.9);
+      position: relative;
+      overflow: hidden;
+      animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .login-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, transparent 40%, rgba(255,255,255,0.15) 100%);
+      pointer-events: none;
+      border-radius: inherit;
+    }
+
+    .login-content { position: relative; z-index: 1; }
+
+    .login-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 20px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      box-shadow: 0 4px 16px rgba(59,130,246,0.35);
+    }
+    .login-logo svg { width: 32px; height: 32px; }
+
+    .login-title {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a365d;
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+
+    .login-subtitle {
+      text-align: center;
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 32px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 6px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: #1e293b;
+      background: rgba(255,255,255,0.85);
+      border: 1.5px solid rgba(15,23,42,0.1);
+      border-radius: 10px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .form-input::placeholder { color: #94a3b8; }
+    .form-input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.15);
+      background: white;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      color: white;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      margin-top: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .login-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .login-btn:hover {
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 6px 24px rgba(59,130,246,0.45), 0 0 40px rgba(59,130,246,0.15);
+    }
+    .login-btn:active {
+      transform: translateY(0) scale(0.99);
+    }
+    .login-btn:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .login-error {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      background: #fef2f2;
+      border: 1px solid rgba(220,38,38,0.15);
+      border-radius: 10px;
+      font-size: 13px;
+      color: #dc2626;
+      animation: fadeIn 0.3s ease;
+    }
+    .login-error.show { display: flex; }
+    .login-error svg { flex-shrink: 0; }
+
+    .login-footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (max-width: 480px) {
+      .login-card { margin: 16px; padding: 32px 24px; border-radius: 20px; }
+      .login-title { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-content">
+      <div class="login-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+          <path d="M7 8l3 3 5-5" stroke-width="2"/>
+        </svg>
+      </div>
+
+      <h1 class="login-title">Monitoreo LABSIS LAPI</h1>
+      <p class="login-subtitle">Ingresa tus credenciales para continuar</p>
+
+      <div class="login-error" id="login-error">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+        <span id="login-error-text">Credenciales inválidas</span>
+      </div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label">Usuario</label>
+          <input type="text" class="form-input" id="username" placeholder="Tu usuario" autocomplete="username" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contraseña</label>
+          <input type="password" class="form-input" id="password" placeholder="Tu contraseña" autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="login-btn" id="login-btn">Iniciar sesión</button>
+      </form>
+
+      <p class="login-footer">Dashboard LAPI v8 — Dynamtek</p>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('login-btn');
+      const errorEl = document.getElementById('login-error');
+      const errorText = document.getElementById('login-error-text');
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !password) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Verificando...';
+      errorEl.classList.remove('show');
+
+      try {
+        const res = await fetch('api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          document.cookie = `token=${data.token}; path=/; max-age=86400; SameSite=Strict`;
+          localStorage.setItem('token', data.token);
+          window.location.href = '/monitor/';
+        } else {
+          errorText.textContent = data.error || 'Credenciales inválidas';
+          errorEl.classList.add('show');
+        }
+      } catch (err) {
+        errorText.textContent = 'Error de conexión';
+        errorEl.classList.add('show');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Iniciar sesión';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "lapi-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard de monitoreo para infraestructura LABSIS LAPI",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.6.2",
+    "express": "^4.21.0",
+    "node-ssh": "^13.2.0",
+    "pg": "^8.18.0"
+  }
+}
