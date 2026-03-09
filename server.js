@@ -89,6 +89,17 @@ app.get('/api/me', (req, res) => {
   res.json(req.user);
 });
 
+// Site config para frontend (nombre del sitio, servidores disponibles)
+app.get('/api/site-config', (req, res) => {
+  const servers = process.env.MONITOR_SERVERS
+    ? JSON.parse(process.env.MONITOR_SERVERS)
+    : { el18: { name: 'El 18' }, el316: { name: 'El 3' } };
+  res.json({
+    siteName: process.env.SITE_NAME || 'LAPI',
+    servers: Object.entries(servers).map(([id, s]) => ({ id, name: s.name || id })),
+  });
+});
+
 app.get('/api/users', requireAdmin, (req, res) => {
   res.json(auth.listUsers());
 });

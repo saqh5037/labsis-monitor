@@ -4,3 +4,4 @@ data/
 ._*
 .env
 .DS_Store
+ecosystem.iner.config.js
