@@ -14,6 +14,12 @@ const BIND_HOST = process.env.BIND_HOST || '0.0.0.0';
 const FETCH_INTERVAL = 30000;
 const QUERIES_INTERVAL = 300000;
 
+// Servidores configurados (mismo parsing que fetcher.js)
+const SERVERS_CONFIG = process.env.MONITOR_SERVERS
+  ? JSON.parse(process.env.MONITOR_SERVERS)
+  : { el18: { host: '18.224.139.66', name: 'El 18' }, el316: { host: '3.135.64.52', name: 'El 3' } };
+const CONFIGURED_SERVERS = Object.keys(SERVERS_CONFIG);
+
 const app = express();
 const fetcher = new DataFetcher();
 const storage = new Storage();
@@ -89,14 +95,19 @@ app.get('/api/me', (req, res) => {
   res.json(req.user);
 });
 
-// Site config para frontend (nombre del sitio, servidores disponibles)
+// Site config para frontend (nombre del sitio, servidores disponibles con metadata)
 app.get('/api/site-config', (req, res) => {
-  const servers = process.env.MONITOR_SERVERS
-    ? JSON.parse(process.env.MONITOR_SERVERS)
-    : { el18: { name: 'El 18' }, el316: { name: 'El 3' } };
   res.json({
     siteName: process.env.SITE_NAME || 'LAPI',
-    servers: Object.entries(servers).map(([id, s]) => ({ id, name: s.name || id })),
+    servers: Object.entries(SERVERS_CONFIG).map(([id, s]) => ({
+      id,
+      name: s.name || id,
+      ip: s.ip || s.host || '',
+      diskGB: s.diskGB || 32,
+      memGB: s.memGB || 32,
+      heapGB: s.heapGB || 12,
+      appPort: s.appPort || 8080,
+    })),
   });
 });
 
@@ -119,12 +130,14 @@ app.get('/api/data', (req, res) => {
   const { from, to } = req.query;
   if (from && to) {
     const data = {
-      el18: storage.queryLabsis('el18', from, to),
-      el316: storage.queryLabsis('el316', from, to),
       rds: storage.queryRds(from, to),
       logs: fetcher.getData().logs,
       lastUpdate: new Date().toISOString(),
     };
+    // Agregar datos de cada servidor configurado
+    for (const id of CONFIGURED_SERVERS) {
+      data[id] = storage.queryLabsis(id, from, to);
+    }
     res.json(data);
   } else {
     res.json(fetcher.getData());
@@ -189,7 +202,7 @@ app.get('/api/export/:type', (req, res) => {
   if (!from || !to) return res.status(400).send('Parámetros from y to requeridos');
 
   let rows, columns;
-  if (type === 'el18' || type === 'el316') {
+  if (CONFIGURED_SERVERS.includes(type)) {
     rows = storage.queryLabsis(type, from, to);
     columns = ['timestamp', 'cpu_user', 'cpu_sys', 'cpu_iowait', 'cpu_steal', 'cpu_idle',
       'load_1', 'load_5', 'mem_total_mb', 'mem_used_mb', 'mem_free_mb',
@@ -208,7 +221,7 @@ app.get('/api/export/:type', (req, res) => {
     rows = storage.queryEventsByRange(from + 'T00:00:00Z', to + 'T23:59:59Z');
     columns = ['time', 'level', 'msg', 'category'];
   } else {
-    return res.status(400).send('Tipo no válido: el18, el316, rds, queries, events');
+    return res.status(400).send(`Tipo no válido: ${CONFIGURED_SERVERS.join(', ')}, rds, queries, events`);
   }
 
   const header = columns.join(',');
@@ -386,9 +399,11 @@ async function fetchAndBroadcast(full = false) {
   try {
     const data = await fetcher.fetchAll(full);
 
-    if (data.el18.length) storage.insertLabsis('el18', data.el18);
-    if (data.el316.length) storage.insertLabsis('el316', data.el316);
-    if (data.rds.length) storage.insertRds(data.rds);
+    // Insertar datos de cada servidor configurado
+    for (const id of CONFIGURED_SERVERS) {
+      if (data[id] && data[id].length) storage.insertLabsis(id, data[id]);
+    }
+    if (data.rds && data.rds.length) storage.insertRds(data.rds);
 
     if (eventDetector) {
       const events = eventDetector.detect(data);
@@ -401,15 +416,20 @@ async function fetchAndBroadcast(full = false) {
     }
 
     broadcast(data);
-    console.log(`[Fetch] el18:${data.el18.length} el316:${data.el316.length} rds:${data.rds.length} clients:${sseClients.length}`);
+    const serverCounts = CONFIGURED_SERVERS.map(id => `${id}:${(data[id] || []).length}`).join(' ');
+    console.log(`[Fetch] ${serverCounts} rds:${(data.rds || []).length} clients:${sseClients.length}`);
   } catch (err) {
     console.error('[Fetch] Error:', err.message);
   }
 }
 
 async function fetchBackupStatus() {
+  // Buscar servidor con backupPath configurado
+  const backupEntry = Object.entries(SERVERS_CONFIG).find(([, s]) => s.backupPath);
+  if (!backupEntry) return;
+  const [backupServerId, backupConf] = backupEntry;
   try {
-    const output = await fetcher.execCommand('el316', 'ls -lt /home/dynamtek/autoPGbackup/ 2>/dev/null | head -6');
+    const output = await fetcher.execCommand(backupServerId, `ls -lt ${backupConf.backupPath} 2>/dev/null | head -6`);
     if (!output) return;
     const lines = output.trim().split('\n').filter(l => l && !l.startsWith('total'));
     if (!lines.length) return;
@@ -482,7 +502,8 @@ async function fetchQueries() {
 
 // Startup
 app.listen(PORT, BIND_HOST, async () => {
-  console.log(`\n  Dashboard LAPI corriendo en http://${BIND_HOST}:${PORT}\n`);
+  const siteName = process.env.SITE_NAME || 'LAPI';
+  console.log(`\n  Dashboard ${siteName} corriendo en http://${BIND_HOST}:${PORT}\n`);
 
   storage.init();
   storage.initBackupTable();

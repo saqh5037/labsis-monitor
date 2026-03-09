@@ -9,6 +9,33 @@ module.exports = {
       BIND_HOST: "127.0.0.1",
       PORT: "3090",
       PG_PASSWORD: "labsis-lapi",
+      SITE_NAME: "LAPI",
+      MONITOR_SERVERS: JSON.stringify({
+        el18: {
+          host: "18.224.139.66",
+          name: "El 18",
+          ip: "18.224.139.66",
+          diskGB: 49,
+          memGB: 32,
+          heapGB: 12,
+          appPort: 8080,
+          labsisCSV: "/tmp/labsis-monitor-el18.csv",
+          rdsCSV: "/tmp/rds-metrics-el316.csv",
+          backupPath: null
+        },
+        el316: {
+          host: "3.135.64.52",
+          name: "El 3",
+          ip: "3.135.64.52",
+          diskGB: 49,
+          memGB: 64,
+          heapGB: 24,
+          appPort: 8080,
+          labsisCSV: "/tmp/labsis-monitor-el316.csv",
+          rdsCSV: "/tmp/rds-metrics-el316.csv",
+          backupPath: "/home/dynamtek/labsis-backup"
+        }
+      }),
       PATH: "/home/dynamtek/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     },
     max_memory_restart: "150M",

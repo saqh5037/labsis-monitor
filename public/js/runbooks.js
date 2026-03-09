@@ -142,8 +142,11 @@ function renderRunbookHTML(diagType) {
       if (a.paramPrompt) {
         // Acción que necesita un parámetro (PID o servidor)
         const isServer = a.paramPrompt === 'server';
+        const serverOptions = window.SITE_CONFIG
+          ? window.SITE_CONFIG.servers.map(s => `<option value="${s.id}">${s.name}</option>`).join('')
+          : '<option value="srv">Servidor</option>';
         const inputHtml = isServer
-          ? '<select class="action-param rb-action-param" data-param="server"><option value="el18">El 18</option><option value="el316">El 3</option></select>'
+          ? `<select class="action-param rb-action-param" data-param="server">${serverOptions}</select>`
           : `<input class="action-param rb-action-param" data-param="${a.paramPrompt}" type="number" placeholder="PID" style="width:80px">`;
         html += `<div class="rb-action">${inputHtml}<button class="${btnClass}" onclick="handleRunbookAction('${a.name}', '${a.risk}', this)">${a.label}</button><div class="action-inline-result" style="display:none"></div></div>`;
       } else {

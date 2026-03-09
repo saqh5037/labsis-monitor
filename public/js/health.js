@@ -4,93 +4,67 @@ function renderHealthPanel(data) {
   const container = document.getElementById('health-panel');
   if (!container) return;
 
-  const el18 = lastItem(data.el18);
-  const el316 = lastItem(data.el316);
+  const servers = window.SITE_CONFIG ? window.SITE_CONFIG.servers : [];
   const rds = lastItem(data.rds);
 
-  if (!el18 && !el316 && !rds) {
+  // Check if we have any data
+  const hasServerData = servers.some(srv => data[srv.id] && data[srv.id].length);
+  if (!hasServerData && !rds) {
     container.innerHTML = '<div class="no-data">Esperando datos...</div>';
     return;
   }
 
   const checks = [];
 
-  // — CPU —
-  if (el18) {
-    const cpuUsed = 100 - (el18.cpu_idle || 100);
-    const steal = el18.cpu_steal || 0;
-    let level = 'ok', detail = `${cpuUsed.toFixed(0)}% usado`;
-    if (cpuUsed > 85) { level = 'crit'; detail += ' — servidor saturado'; }
-    else if (steal > 30) { level = 'crit'; detail += ` — steal ${steal.toFixed(1)}%`; }
-    else if (cpuUsed > 70) { level = 'warn'; detail += ' — carga alta'; }
-    checks.push({ label: 'CPU El 18', value: cpuUsed.toFixed(0) + '%', level, detail, tab: 'servers', chartId: 'chart-cpu-el18' });
-  }
-  if (el316) {
-    const cpuUsed = 100 - (el316.cpu_idle || 100);
-    const steal = el316.cpu_steal || 0;
-    let level = 'ok', detail = `${cpuUsed.toFixed(0)}% usado`;
-    if (cpuUsed > 85) { level = 'crit'; detail += ' — servidor saturado'; }
-    else if (steal > 30) { level = 'crit'; detail += ` — steal ${steal.toFixed(1)}%`; }
-    else if (cpuUsed > 70) { level = 'warn'; detail += ' — carga alta'; }
-    checks.push({ label: 'CPU El 3', value: cpuUsed.toFixed(0) + '%', level, detail, tab: 'servers', chartId: 'chart-cpu-el316' });
-  }
+  // — Per-server checks: CPU, Memoria, Disco —
+  servers.forEach((srv, i) => {
+    const row = lastItem(data[srv.id]);
+    if (!row) return;
 
-  // — Memoria —
-  if (el18) {
-    const pct = el18.mem_used_mb / el18.mem_total_mb * 100;
-    const freeGB = (el18.mem_free_mb / 1024).toFixed(1);
-    let level = 'ok', detail = `${freeGB} GB libres`;
-    if (pct > 92) { level = 'crit'; detail += ' — riesgo de inestabilidad'; }
-    else if (pct > 85) { level = 'warn'; detail += ' — vigilar'; }
-    checks.push({ label: 'Memoria El 18', value: pct.toFixed(0) + '%', level, detail, tab: 'servers', chartId: 'chart-mem-el18' });
-  }
-  if (el316) {
-    const pct = el316.mem_used_mb / el316.mem_total_mb * 100;
-    const freeGB = (el316.mem_free_mb / 1024).toFixed(1);
-    let level = 'ok', detail = `${freeGB} GB libres`;
-    if (pct > 92) { level = 'crit'; detail += ' — riesgo de inestabilidad'; }
-    else if (pct > 85) { level = 'warn'; detail += ' — vigilar'; }
-    checks.push({ label: 'Memoria El 3', value: pct.toFixed(0) + '%', level, detail, tab: 'servers', chartId: 'chart-mem-el316' });
-  }
+    // CPU
+    const cpuUsed = 100 - (row.cpu_idle || 100);
+    const steal = row.cpu_steal || 0;
+    let cpuLevel = 'ok', cpuDetail = `${cpuUsed.toFixed(0)}% usado`;
+    if (cpuUsed > 85) { cpuLevel = 'crit'; cpuDetail += ' — saturado'; }
+    else if (steal > 30) { cpuLevel = 'crit'; cpuDetail += ` — steal ${steal.toFixed(1)}%`; }
+    else if (cpuUsed > 70) { cpuLevel = 'warn'; cpuDetail += ' — carga alta'; }
+    checks.push({ label: `CPU ${srv.name}`, value: cpuUsed.toFixed(0) + '%', level: cpuLevel, detail: cpuDetail, tab: 'servers', chartId: `chart-cpu-${i}` });
 
-  // — Disco —
-  if (el18) {
-    const pct = el18.disk_root_pct || 0;
-    const freeGB = (49 * (100 - pct) / 100).toFixed(1);
-    let level = 'ok', detail = `${freeGB} GB libres`;
-    if (pct >= 85) { level = 'crit'; detail += ' — espacio crítico'; }
-    else if (pct >= 75) { level = 'warn'; detail += ' — poco espacio'; }
-    checks.push({ label: 'Disco El 18', value: pct + '%', level, detail, tab: 'infra', chartId: 'disk-gauges' });
-  }
-  if (el316) {
-    const pct = el316.disk_root_pct || 0;
-    const freeGB = (49 * (100 - pct) / 100).toFixed(1);
-    let level = 'ok', detail = `${freeGB} GB libres`;
-    if (pct >= 85) { level = 'crit'; detail += ' — espacio crítico'; }
-    else if (pct >= 75) { level = 'warn'; detail += ' — poco espacio'; }
-    checks.push({ label: 'Disco El 3', value: pct + '%', level, detail, tab: 'infra', chartId: 'disk-gauges' });
-  }
+    // Memoria
+    const memPct = row.mem_used_mb / row.mem_total_mb * 100;
+    const freeGB = (row.mem_free_mb / 1024).toFixed(1);
+    let memLevel = 'ok', memDetail = `${freeGB} GB libres`;
+    if (memPct > 92) { memLevel = 'crit'; memDetail += ' — riesgo de inestabilidad'; }
+    else if (memPct > 85) { memLevel = 'warn'; memDetail += ' — vigilar'; }
+    checks.push({ label: `Memoria ${srv.name}`, value: memPct.toFixed(0) + '%', level: memLevel, detail: memDetail, tab: 'servers', chartId: `chart-mem-${i}` });
 
-  // — JBoss —
-  if (el18 || el316) {
-    const t18 = el18 ? el18.jboss_threads : 0;
-    const t316 = el316 ? el316.jboss_threads : 0;
-    const max = Math.max(t18, t316);
-    let level = 'ok', detail = `El 18: ${t18}, El 3: ${t316}`;
-    if (max > 300) { level = 'crit'; detail += ' — no da abasto'; }
-    else if (max > 200) { level = 'warn'; detail += ' — carga alta'; }
-    checks.push({ label: 'Threads LABSIS', value: max, level, detail, tab: 'jboss', chartId: 'chart-jboss-threads' });
-  }
-  if (el18 || el316) {
-    const r18 = el18 ? el18.jboss_rss_mb : 0;
-    const r316 = el316 ? el316.jboss_rss_mb : 0;
-    // Heap: El 18 = 12 GB, El 3 = 24 GB. RSS normal = heap + 1-3 GB
-    const warnEl18 = r18 > 15360, warnEl316 = r316 > 27648;
-    const critEl18 = r18 > 17408, critEl316 = r316 > 30720;
-    let level = 'ok', detail = `El 18: ${(r18/1024).toFixed(1)} GB, El 3: ${(r316/1024).toFixed(1)} GB`;
-    if (critEl18 || critEl316) { level = 'crit'; detail += ' — posible memory leak'; }
-    else if (warnEl18 || warnEl316) { level = 'warn'; detail += ' — RSS elevado, monitorear'; }
-    checks.push({ label: 'Memoria LABSIS', value: (Math.max(r18,r316)/1024).toFixed(1) + ' GB', level, detail, tab: 'jboss', chartId: 'chart-jboss-rss' });
+    // Disco
+    const diskPct = row.disk_root_pct || 0;
+    const diskFreeGB = (srv.diskGB * (100 - diskPct) / 100).toFixed(1);
+    let diskLevel = 'ok', diskDetail = `${diskFreeGB} GB libres`;
+    if (diskPct >= 85) { diskLevel = 'crit'; diskDetail += ' — espacio crítico'; }
+    else if (diskPct >= 75) { diskLevel = 'warn'; diskDetail += ' — poco espacio'; }
+    checks.push({ label: `Disco ${srv.name}`, value: diskPct + '%', level: diskLevel, detail: diskDetail, tab: 'infra', chartId: 'disk-gauges' });
+  });
+
+  // — JBoss (multi-server) —
+  const serverRows = servers.map(srv => lastItem(data[srv.id])).filter(Boolean);
+  if (serverRows.length) {
+    const threadVals = servers.map(srv => { const r = lastItem(data[srv.id]); return { name: srv.name, val: r ? r.jboss_threads : 0 }; });
+    const maxThreads = Math.max(...threadVals.map(t => t.val));
+    let tLevel = 'ok', tDetail = threadVals.map(t => `${t.name}: ${t.val}`).join(', ');
+    if (maxThreads > 300) { tLevel = 'crit'; tDetail += ' — no da abasto'; }
+    else if (maxThreads > 200) { tLevel = 'warn'; tDetail += ' — carga alta'; }
+    checks.push({ label: 'Threads LABSIS', value: maxThreads, level: tLevel, detail: tDetail, tab: 'jboss', chartId: 'chart-jboss-threads' });
+
+    const rssVals = servers.map(srv => { const r = lastItem(data[srv.id]); return { name: srv.name, rss: r ? r.jboss_rss_mb : 0, heapGB: srv.heapGB }; });
+    const maxRss = Math.max(...rssVals.map(r => r.rss));
+    let rLevel = 'ok', rDetail = rssVals.map(r => `${r.name}: ${(r.rss/1024).toFixed(1)} GB`).join(', ');
+    const anyCrit = rssVals.some(r => r.rss > r.heapGB * 1024 * 1.4);
+    const anyWarn = rssVals.some(r => r.rss > r.heapGB * 1024 * 1.25);
+    if (anyCrit) { rLevel = 'crit'; rDetail += ' — posible memory leak'; }
+    else if (anyWarn) { rLevel = 'warn'; rDetail += ' — RSS elevado'; }
+    checks.push({ label: 'Memoria LABSIS', value: (maxRss/1024).toFixed(1) + ' GB', level: rLevel, detail: rDetail, tab: 'jboss', chartId: 'chart-jboss-rss' });
   }
 
   // — Base de Datos —
@@ -141,15 +115,14 @@ function renderHealthPanel(data) {
   }
 
   // — Conexiones TCP atoradas —
-  if (el18 || el316) {
-    const cw18 = el18 ? el18.tcp8080_closewait || 0 : 0;
-    const cw316 = el316 ? el316.tcp8080_closewait || 0 : 0;
-    const total = cw18 + cw316;
-    let level = 'ok', detail = `El 18: ${cw18}, El 3: ${cw316}`;
-    if (total > 20) { level = 'crit'; detail += ' — acumulándose'; }
-    else if (total > 5) { level = 'warn'; detail += ' — revisar'; }
-    else { detail += ' — limpio'; }
-    checks.push({ label: 'TCP atoradas', value: total, level, detail, tab: 'jboss', chartId: 'chart-tcp8080-el18' });
+  if (serverRows.length) {
+    const tcpVals = servers.map(srv => { const r = lastItem(data[srv.id]); return { name: srv.name, val: r ? r.tcp8080_closewait || 0 : 0 }; });
+    const totalCw = tcpVals.reduce((s, v) => s + v.val, 0);
+    let tcpLevel = 'ok', tcpDetail = tcpVals.map(v => `${v.name}: ${v.val}`).join(', ');
+    if (totalCw > 20) { tcpLevel = 'crit'; tcpDetail += ' — acumulándose'; }
+    else if (totalCw > 5) { tcpLevel = 'warn'; tcpDetail += ' — revisar'; }
+    else { tcpDetail += ' — limpio'; }
+    checks.push({ label: 'TCP atoradas', value: totalCw, level: tcpLevel, detail: tcpDetail, tab: 'jboss', chartId: 'chart-tcp8080-0' });
   }
 
   // — Anomalías recientes —

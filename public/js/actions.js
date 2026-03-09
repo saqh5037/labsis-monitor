@@ -456,9 +456,11 @@ function renderCatalog(container, grouped) {
       <div class="action-cards">`;
 
     items.forEach(action => {
+      const serverNameMap = {};
+      if (window.SITE_CONFIG) window.SITE_CONFIG.servers.forEach(s => { serverNameMap[s.id] = s.name; });
       const paramsHTML = action.params.map(p => {
         if (p.type === 'enum') {
-          const options = p.values.map(v => `<option value="${v}">${v}</option>`).join('');
+          const options = p.values.map(v => `<option value="${v}">${serverNameMap[v] || v}</option>`).join('');
           return `<select class="action-param" data-param="${p.name}">${options}</select>`;
         }
         return `<input class="action-param" data-param="${p.name}" type="number" placeholder="${p.label}" min="${p.min || ''}" max="${p.max || ''}" value="${p.default || ''}">`;

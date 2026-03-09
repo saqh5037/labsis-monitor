@@ -254,7 +254,9 @@
         if (res.ok && data.token) {
           document.cookie = `token=${data.token}; path=/; max-age=86400; SameSite=Strict`;
           localStorage.setItem('token', data.token);
-          window.location.href = '/monitor/';
+          // Redirect a la raíz del dashboard (detectar base path automáticamente)
+          const basePath = window.location.pathname.replace(/login\.html.*$/, '');
+          window.location.href = basePath || '/';
         } else {
           errorText.textContent = data.error || 'Credenciales inválidas';
           errorEl.classList.add('show');

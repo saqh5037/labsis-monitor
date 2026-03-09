@@ -245,50 +245,69 @@ function renderMemChart(id, rows) {
   else setDiag(id, 'ok', `Memoria al ${usedPct.toFixed(0)}% — ${freeGB} GB libres. Suficiente espacio.`);
 }
 
-// ── JBoss RSS ──
-function renderJbossRss(el18, el316) {
-  // RSS siempre es mayor que heap (incluye metaspace, librerias nativas, etc.)
-  // Heap reservado: El 18 = 12 GB, El 3 = 24 GB
-  // RSS normal = heap + 1-3 GB overhead. Alarma solo si crece mucho mas alla.
-  const HEAP_EL18 = 12288, HEAP_EL316 = 24576;
-  const RSS_WARN_EL18 = 15360, RSS_WARN_EL316 = 27648;
-  const RSS_CRIT_EL18 = 17408, RSS_CRIT_EL316 = 30720;
-  mk('chart-jboss-rss', { type: 'line',
-    data: { labels: lbl(el18.length >= el316.length ? el18 : el316), datasets: [
-      ds('El 18', el18.map(r => r.jboss_rss_mb), C.blue),
-      ds('El 3', el316.map(r => r.jboss_rss_mb), C.orange),
-    ]},
-    options: opts({}, {
-      heapEl316: tl(HEAP_EL316, C.red + '44', 'Heap El 3: 24 GB', 'end'),
-      heapEl18: tl(HEAP_EL18, C.blue + '44', 'Heap El 18: 12 GB', 'end'),
-    })
+// ── JBoss RSS (dinámico multi-servidor) ──
+function renderJbossRss(serverRows) {
+  const servers = window.SITE_CONFIG ? window.SITE_CONFIG.servers : [];
+  const colors = [C.blue, C.orange, C.green, C.purple, C.cyan];
+  let longestRows = [];
+  const datasets = [];
+  const annotations = {};
+
+  servers.forEach((srv, i) => {
+    const rows = serverRows[i] || [];
+    if (rows.length > longestRows.length) longestRows = rows;
+    datasets.push(ds(srv.name, rows.map(r => r.jboss_rss_mb), colors[i % colors.length]));
+    const heapMB = srv.heapGB * 1024;
+    annotations[`heap${i}`] = tl(heapMB, (colors[i % colors.length]) + '44', `Heap ${srv.name}: ${srv.heapGB} GB`, 'end');
   });
-  const r18 = el18.length ? el18[el18.length - 1].jboss_rss_mb : 0;
-  const r316 = el316.length ? el316[el316.length - 1].jboss_rss_mb : 0;
-  if (r18 > RSS_CRIT_EL18 || r316 > RSS_CRIT_EL316) setDiag('chart-jboss-rss', 'crit', `LABSIS: El 18 ${(r18/1024).toFixed(1)} GB, El 3 ${(r316/1024).toFixed(1)} GB. RSS muy alto — posible memory leak.`);
-  else if (r18 > RSS_WARN_EL18 || r316 > RSS_WARN_EL316) setDiag('chart-jboss-rss', 'warn', `LABSIS: El 18 ${(r18/1024).toFixed(1)} GB, El 3 ${(r316/1024).toFixed(1)} GB. RSS elevado — monitorear.`);
-  else setDiag('chart-jboss-rss', 'ok', `LABSIS: El 18 ${(r18/1024).toFixed(1)} GB (heap 12 GB), El 3 ${(r316/1024).toFixed(1)} GB (heap 24 GB). Memoria estable.`);
+
+  mk('chart-jboss-rss', { type: 'line',
+    data: { labels: lbl(longestRows), datasets },
+    options: opts({}, annotations)
+  });
+
+  // Diagnóstico
+  let maxLevel = 'ok', diagParts = [];
+  servers.forEach((srv, i) => {
+    const rows = serverRows[i] || [];
+    const rss = rows.length ? rows[rows.length - 1].jboss_rss_mb : 0;
+    const heapMB = srv.heapGB * 1024;
+    const warnThresh = heapMB * 1.25, critThresh = heapMB * 1.4;
+    diagParts.push(`${srv.name} ${(rss/1024).toFixed(1)} GB (heap ${srv.heapGB} GB)`);
+    if (rss > critThresh) maxLevel = 'crit';
+    else if (rss > warnThresh && maxLevel !== 'crit') maxLevel = 'warn';
+  });
+  const msg = maxLevel === 'crit' ? `RSS muy alto — posible memory leak. ${diagParts.join(', ')}` :
+    maxLevel === 'warn' ? `RSS elevado — monitorear. ${diagParts.join(', ')}` :
+    `Memoria estable. ${diagParts.join(', ')}`;
+  setDiag('chart-jboss-rss', maxLevel, msg);
 }
 
 
-// ── JBoss Threads ──
-function renderJbossThreads(el18, el316) {
-  mk('chart-jboss-threads', { type: 'line',
-    data: { labels: lbl(el18.length >= el316.length ? el18 : el316), datasets: [
-      ds('El 18', el18.map(r => r.jboss_threads), C.blue),
-      ds('El 3', el316.map(r => r.jboss_threads), C.orange),
-    ]},
-    options: opts({}, {
-      warn: tl(200, C.yellow, '⚠ Alerta: 200'),
-      crit: tl(300, C.red, '⛔ Crítico: 300', 'end'),
-    })
+// ── JBoss Threads (dinámico) ──
+function renderJbossThreads(serverRows) {
+  const servers = window.SITE_CONFIG ? window.SITE_CONFIG.servers : [];
+  const colors = [C.blue, C.orange, C.green, C.purple, C.cyan];
+  let longestRows = [];
+  const datasets = [];
+  servers.forEach((srv, i) => {
+    const rows = serverRows[i] || [];
+    if (rows.length > longestRows.length) longestRows = rows;
+    datasets.push(ds(srv.name, rows.map(r => r.jboss_threads), colors[i % colors.length]));
   });
-  const t18 = el18.length ? el18[el18.length - 1].jboss_threads : 0;
-  const t316 = el316.length ? el316[el316.length - 1].jboss_threads : 0;
-  const max = Math.max(t18, t316);
-  if (max > 300) setDiag('chart-jboss-threads', 'crit', `${max} threads — el servidor no puede atender a todos. Usuarios experimentan errores o timeouts.`);
-  else if (max > 200) setDiag('chart-jboss-threads', 'warn', `${max} threads — carga alta. El 18: ${t18}, El 3: ${t316}. Si sube más, habrá problemas.`);
-  else setDiag('chart-jboss-threads', 'ok', `El 18: ${t18} threads, El 3: ${t316} threads. Carga normal de usuarios.`);
+  mk('chart-jboss-threads', { type: 'line',
+    data: { labels: lbl(longestRows), datasets },
+    options: opts({}, { warn: tl(200, C.yellow, '⚠ Alerta: 200'), crit: tl(300, C.red, '⛔ Crítico: 300', 'end') })
+  });
+  const threadValues = servers.map((srv, i) => {
+    const rows = serverRows[i] || [];
+    return { name: srv.name, val: rows.length ? rows[rows.length - 1].jboss_threads : 0 };
+  });
+  const max = Math.max(...threadValues.map(t => t.val));
+  const detail = threadValues.map(t => `${t.name}: ${t.val}`).join(', ');
+  if (max > 300) setDiag('chart-jboss-threads', 'crit', `${max} threads — el servidor no puede atender a todos. ${detail}.`);
+  else if (max > 200) setDiag('chart-jboss-threads', 'warn', `${max} threads — carga alta. ${detail}. Si sube más, habrá problemas.`);
+  else setDiag('chart-jboss-threads', 'ok', `${detail} threads. Carga normal de usuarios.`);
 }
 
 // ── TCP 8080 ──
@@ -478,57 +497,71 @@ function renderTps(rows) {
   else setDiag('chart-tps', 'ok', `${commits.toFixed(0)} operaciones/s exitosas, tasa de fallo mínima. Rendimiento normal.`);
 }
 
-// ── TCP 5432 ──
-function renderTcp5432(el18, el316) {
+// ── TCP 5432 (dinámico) ──
+function renderTcp5432(serverRows) {
+  const servers = window.SITE_CONFIG ? window.SITE_CONFIG.servers : [];
+  const colors = [C.blue, C.orange, C.green, C.purple, C.cyan];
+  let longestRows = [];
+  const datasets = [];
+  servers.forEach((srv, i) => {
+    const rows = serverRows[i] || [];
+    if (rows.length > longestRows.length) longestRows = rows;
+    datasets.push(ds(srv.name, rows.map(r => r.tcp5432_estab), colors[i % colors.length]));
+  });
   mk('chart-tcp5432', { type: 'line',
-    data: { labels: lbl(el18.length >= el316.length ? el18 : el316), datasets: [
-      ds('El 18', el18.map(r => r.tcp5432_estab), C.blue),
-      ds('El 3', el316.map(r => r.tcp5432_estab), C.orange),
-    ]},
-    options: opts({}, {
-      warn: tl(60, C.yellow, '⚠ Alerta: 60'),
-      crit: tl(100, C.red, '⛔ Crítico: 100', 'end'),
-    })
+    data: { labels: lbl(longestRows), datasets },
+    options: opts({}, { warn: tl(60, C.yellow, '⚠ Alerta: 60'), crit: tl(100, C.red, '⛔ Crítico: 100', 'end') })
   });
-  // Diagnóstico
-  const l18 = el18.length ? el18[el18.length - 1].tcp5432_estab : 0;
-  const l316 = el316.length ? el316[el316.length - 1].tcp5432_estab : 0;
-  const total = l18 + l316;
-  if (total > 100) setDiag('chart-tcp5432', 'crit', `${total} conexiones a la BD (El 18: ${l18}, El 3: ${l316}). Demasiadas — hay riesgo de saturar la base de datos.`);
-  else if (l18 > 60 || l316 > 60) setDiag('chart-tcp5432', 'warn', `Un servidor usa muchas conexiones (El 18: ${l18}, El 3: ${l316}). Revisar configuración de datasources.`);
-  else setDiag('chart-tcp5432', 'ok', `El 18: ${l18} conexiones, El 3: ${l316} conexiones. Dentro del rango normal.`);
+  const vals = servers.map((srv, i) => {
+    const rows = serverRows[i] || [];
+    return { name: srv.name, val: rows.length ? rows[rows.length - 1].tcp5432_estab : 0 };
+  });
+  const total = vals.reduce((s, v) => s + v.val, 0);
+  const detail = vals.map(v => `${v.name}: ${v.val}`).join(', ');
+  if (total > 100) setDiag('chart-tcp5432', 'crit', `${total} conexiones a la BD (${detail}). Demasiadas.`);
+  else if (vals.some(v => v.val > 60)) setDiag('chart-tcp5432', 'warn', `Un servidor usa muchas conexiones (${detail}). Revisar datasources.`);
+  else setDiag('chart-tcp5432', 'ok', `${detail} conexiones. Dentro del rango normal.`);
 }
 
-// ── Load Average ──
-function renderLoad(el18, el316) {
+// ── Load Average (dinámico) ──
+function renderLoad(serverRows) {
+  const servers = window.SITE_CONFIG ? window.SITE_CONFIG.servers : [];
+  const colors = [C.blue, C.orange, C.green, C.purple, C.cyan];
+  let longestRows = [];
+  const datasets = [];
+  servers.forEach((srv, i) => {
+    const rows = serverRows[i] || [];
+    if (rows.length > longestRows.length) longestRows = rows;
+    datasets.push(ds(`${srv.name} (1 min)`, rows.map(r => r.load_1), colors[i % colors.length]));
+    datasets.push(ds(`${srv.name} (5 min)`, rows.map(r => r.load_5), colors[i % colors.length], null, { borderDash: [4,4], borderWidth: 1 }));
+  });
   mk('chart-load', { type: 'line',
-    data: { labels: lbl(el18.length >= el316.length ? el18 : el316), datasets: [
-      ds('El 18 (1 min)', el18.map(r => r.load_1), C.blue),
-      ds('El 18 (5 min)', el18.map(r => r.load_5), C.blue, null, { borderDash: [4,4], borderWidth: 1 }),
-      ds('El 3 (1 min)', el316.map(r => r.load_1), C.orange),
-      ds('El 3 (5 min)', el316.map(r => r.load_5), C.orange, null, { borderDash: [4,4], borderWidth: 1 }),
-    ]},
-    options: opts({}, {
-      cores: tl(8, C.yellow, '⚠ 8 = capacidad máxima'),
-      crit: tl(16, C.red, '⛔ 16 = saturación severa', 'end'),
-    })
+    data: { labels: lbl(longestRows), datasets },
+    options: opts({}, { cores: tl(8, C.yellow, '⚠ 8 = capacidad máxima'), crit: tl(16, C.red, '⛔ 16 = saturación severa', 'end') })
   });
-  const l18 = el18.length ? el18[el18.length - 1].load_1 : 0;
-  const l316 = el316.length ? el316[el316.length - 1].load_1 : 0;
-  const max = Math.max(l18, l316);
-  if (max > 16) setDiag('chart-load', 'crit', `Carga en ${max.toFixed(1)} — saturación severa (capacidad: 8). Las tareas se acumulan en cola y el servidor no alcanza.`);
-  else if (max > 8) setDiag('chart-load', 'warn', `Carga en ${max.toFixed(1)} — por encima de la capacidad (8 cores). El 18: ${l18.toFixed(1)}, El 3: ${l316.toFixed(1)}.`);
-  else setDiag('chart-load', 'ok', `El 18: ${l18.toFixed(1)}, El 3: ${l316.toFixed(1)}. Dentro de la capacidad del servidor (8 cores).`);
+  const vals = servers.map((srv, i) => {
+    const rows = serverRows[i] || [];
+    return { name: srv.name, val: rows.length ? rows[rows.length - 1].load_1 : 0 };
+  });
+  const max = Math.max(...vals.map(v => v.val));
+  const detail = vals.map(v => `${v.name}: ${v.val.toFixed(1)}`).join(', ');
+  if (max > 16) setDiag('chart-load', 'crit', `Carga en ${max.toFixed(1)} — saturación severa. ${detail}.`);
+  else if (max > 8) setDiag('chart-load', 'warn', `Carga en ${max.toFixed(1)} — por encima de capacidad. ${detail}.`);
+  else setDiag('chart-load', 'ok', `${detail}. Dentro de la capacidad del servidor.`);
 }
 
-// ── Disk Gauges (visual intuitivo) ──
-function renderDiskGauges(el18, el316) {
-  const disks = [
-    { label: 'El 18 — Disco Principal', pct: el18 ? el18.disk_root_pct : 0 },
-    { label: 'El 18 — /tmp', pct: el18 ? el18.disk_tmp_pct : 0 },
-    { label: 'El 3 — Disco Principal', pct: el316 ? el316.disk_root_pct : 0 },
-    { label: 'El 3 — /tmp', pct: el316 ? el316.disk_tmp_pct : 0 },
-  ];
+// ── Disk Gauges (dinámico) ──
+function renderDiskGauges(serverLastItems) {
+  const servers = window.SITE_CONFIG ? window.SITE_CONFIG.servers : [];
+  const disks = [];
+  servers.forEach((srv, i) => {
+    const row = serverLastItems[i];
+    if (!row) return;
+    disks.push({ label: `${srv.name} — Disco Principal`, pct: row.disk_root_pct || 0, totalGB: srv.diskGB });
+    if (row.disk_tmp_pct !== undefined && row.disk_tmp_pct !== null) {
+      disks.push({ label: `${srv.name} — /tmp`, pct: row.disk_tmp_pct || 0, totalGB: srv.diskGB });
+    }
+  });
 
   const container = document.getElementById('disk-gauges');
   if (!container) return;
@@ -536,7 +569,7 @@ function renderDiskGauges(el18, el316) {
   container.innerHTML = disks.map(d => {
     const color = d.pct >= 85 ? C.red : d.pct >= 75 ? C.yellow : C.green;
     const status = d.pct >= 85 ? 'CRÍTICO' : d.pct >= 75 ? 'ALERTA' : 'OK';
-    const freeGB = (32 * (100 - d.pct) / 100).toFixed(1);
+    const freeGB = (d.totalGB * (100 - d.pct) / 100).toFixed(1);
     return `
       <div class="gauge-card">
         <div class="gauge-label">${d.label}</div>
@@ -552,70 +585,94 @@ function renderDiskGauges(el18, el316) {
   }).join('');
 }
 
-// ── JBoss CPU % ──
-function renderJbossCpu(el18, el316) {
-  mk('chart-jboss-cpu', { type: 'line',
-    data: { labels: lbl(el18.length >= el316.length ? el18 : el316), datasets: [
-      ds('El 18', el18.map(r => r.jboss_cpu_pct || 0), C.blue, C.blueA),
-      ds('El 3', el316.map(r => r.jboss_cpu_pct || 0), C.orange, C.orangeA),
-    ]},
-    options: opts({ y: { ...scaleY, max: 100 } }, {
-      warn: tl(70, C.yellow, '⚠ Alerta: 70%'),
-      crit: tl(90, C.red, '⛔ Crítico: 90%', 'end'),
-    })
+// ── JBoss CPU % (dinámico) ──
+function renderJbossCpu(serverRows) {
+  const servers = window.SITE_CONFIG ? window.SITE_CONFIG.servers : [];
+  const colors = [C.blue, C.orange, C.green, C.purple, C.cyan];
+  const alphas = [C.blueA, C.orangeA, C.greenA, C.purpleA, C.cyanA];
+  let longestRows = [];
+  const datasets = [];
+  servers.forEach((srv, i) => {
+    const rows = serverRows[i] || [];
+    if (rows.length > longestRows.length) longestRows = rows;
+    datasets.push(ds(srv.name, rows.map(r => r.jboss_cpu_pct || 0), colors[i % colors.length], alphas[i % alphas.length]));
   });
-  const c18 = el18.length ? el18[el18.length - 1].jboss_cpu_pct || 0 : 0;
-  const c316 = el316.length ? el316[el316.length - 1].jboss_cpu_pct || 0 : 0;
-  const max = Math.max(c18, c316);
-  const t18 = el18.length ? el18[el18.length - 1].jboss_threads || 0 : 0;
-  const t316 = el316.length ? el316[el316.length - 1].jboss_threads || 0 : 0;
-  const maxThreads = Math.max(t18, t316);
-  if (max > 90) setDiag('chart-jboss-cpu', 'crit', `LABSIS consume ${max.toFixed(0)}% del CPU — la aplicación está saturada.`, 'high_cpu');
-  else if (max > 70) setDiag('chart-jboss-cpu', 'warn', `LABSIS consume ${max.toFixed(0)}% del CPU. El 18: ${c18.toFixed(0)}%, El 3: ${c316.toFixed(0)}%.`, 'high_cpu');
-  else if (maxThreads > 150 && max < 30) setDiag('chart-jboss-cpu', 'warn', `CPU de LABSIS bajo (${max.toFixed(0)}%) pero threads altos (${maxThreads}). Los threads están esperando I/O de la base de datos.`);
-  else setDiag('chart-jboss-cpu', 'ok', `El 18: ${c18.toFixed(0)}%, El 3: ${c316.toFixed(0)}%. Uso normal del procesador por la aplicación.`);
+  mk('chart-jboss-cpu', { type: 'line',
+    data: { labels: lbl(longestRows), datasets },
+    options: opts({ y: { ...scaleY, max: 100 } }, { warn: tl(70, C.yellow, '⚠ Alerta: 70%'), crit: tl(90, C.red, '⛔ Crítico: 90%', 'end') })
+  });
+  const vals = servers.map((srv, i) => {
+    const rows = serverRows[i] || [];
+    const last = rows.length ? rows[rows.length - 1] : {};
+    return { name: srv.name, cpu: last.jboss_cpu_pct || 0, threads: last.jboss_threads || 0 };
+  });
+  const maxCpu = Math.max(...vals.map(v => v.cpu));
+  const maxThreads = Math.max(...vals.map(v => v.threads));
+  const detail = vals.map(v => `${v.name}: ${v.cpu.toFixed(0)}%`).join(', ');
+  if (maxCpu > 90) setDiag('chart-jboss-cpu', 'crit', `LABSIS consume ${maxCpu.toFixed(0)}% del CPU — saturada.`, 'high_cpu');
+  else if (maxCpu > 70) setDiag('chart-jboss-cpu', 'warn', `LABSIS consume ${maxCpu.toFixed(0)}% del CPU. ${detail}.`, 'high_cpu');
+  else if (maxThreads > 150 && maxCpu < 30) setDiag('chart-jboss-cpu', 'warn', `CPU bajo (${maxCpu.toFixed(0)}%) pero threads altos (${maxThreads}). Esperando I/O de BD.`);
+  else setDiag('chart-jboss-cpu', 'ok', `${detail}. Uso normal del procesador.`);
 }
 
-// ── Disk I/O ──
-function renderDiskIO(el18, el316) {
-  // Convertir sectores (512 bytes) a MB
+// ── Disk I/O (dinámico) ──
+function renderDiskIO(serverRows) {
+  const servers = window.SITE_CONFIG ? window.SITE_CONFIG.servers : [];
+  const readColors = [C.blue, C.orange, C.green, C.purple];
+  const writeColors = [C.cyan, C.yellow, C.red, C.orange];
   const toMB = v => (v * 512) / (1024 * 1024);
+  let longestRows = [];
+  const datasets = [];
+  servers.forEach((srv, i) => {
+    const rows = serverRows[i] || [];
+    if (rows.length > longestRows.length) longestRows = rows;
+    datasets.push(ds(`${srv.name} Lectura`, rows.map(r => toMB(r.diskio_read_delta || 0)), readColors[i % readColors.length]));
+    datasets.push(ds(`${srv.name} Escritura`, rows.map(r => toMB(r.diskio_write_delta || 0)), writeColors[i % writeColors.length]));
+  });
   mk('chart-disk-io', { type: 'line',
-    data: { labels: lbl(el18.length >= el316.length ? el18 : el316), datasets: [
-      ds('El 18 Lectura', el18.map(r => toMB(r.diskio_read_delta || 0)), C.blue),
-      ds('El 18 Escritura', el18.map(r => toMB(r.diskio_write_delta || 0)), C.cyan),
-      ds('El 3 Lectura', el316.map(r => toMB(r.diskio_read_delta || 0)), C.orange),
-      ds('El 3 Escritura', el316.map(r => toMB(r.diskio_write_delta || 0)), C.yellow),
-    ]},
+    data: { labels: lbl(longestRows), datasets },
     options: opts({ y: { ...scaleY, beginAtZero: true, title: { display: true, text: 'MB', color: getScaleColors().tickColor, font: { size: 11 } } } })
   });
-  const r18 = el18.length ? toMB((el18[el18.length-1].diskio_read_delta||0) + (el18[el18.length-1].diskio_write_delta||0)) : 0;
-  const r316 = el316.length ? toMB((el316[el316.length-1].diskio_read_delta||0) + (el316[el316.length-1].diskio_write_delta||0)) : 0;
-  const max = Math.max(r18, r316);
-  if (max > 500) setDiag('chart-disk-io', 'crit', `Actividad de disco en ${max.toFixed(0)} MB — posible backup o query pesado leyendo mucha data.`);
-  else if (max > 100) setDiag('chart-disk-io', 'warn', `Actividad de disco en ${max.toFixed(0)} MB. El 18: ${r18.toFixed(0)} MB, El 3: ${r316.toFixed(0)} MB.`);
-  else setDiag('chart-disk-io', 'ok', `Actividad de disco normal. El 18: ${r18.toFixed(1)} MB, El 3: ${r316.toFixed(1)} MB.`);
+  const vals = servers.map((srv, i) => {
+    const rows = serverRows[i] || [];
+    const last = rows.length ? rows[rows.length - 1] : {};
+    return { name: srv.name, val: toMB((last.diskio_read_delta||0) + (last.diskio_write_delta||0)) };
+  });
+  const max = Math.max(...vals.map(v => v.val));
+  const detail = vals.map(v => `${v.name}: ${v.val.toFixed(1)} MB`).join(', ');
+  if (max > 500) setDiag('chart-disk-io', 'crit', `Actividad de disco en ${max.toFixed(0)} MB — posible backup o query pesado.`);
+  else if (max > 100) setDiag('chart-disk-io', 'warn', `Actividad de disco en ${max.toFixed(0)} MB. ${detail}.`);
+  else setDiag('chart-disk-io', 'ok', `Actividad de disco normal. ${detail}.`);
 }
 
-// ── Network ──
-function renderNetwork(el18, el316) {
-  // Convertir bytes a Mbps (asumiendo intervalo de ~5 min = 300s)
+// ── Network (dinámico) ──
+function renderNetwork(serverRows) {
+  const servers = window.SITE_CONFIG ? window.SITE_CONFIG.servers : [];
+  const rxColors = [C.blue, C.orange, C.green, C.purple];
+  const rxAlphas = [C.blueA, C.orangeA, C.greenA, C.purpleA];
+  const txColors = [C.cyan, C.yellow, C.red, C.orange];
   const toMbps = v => (v * 8) / (300 * 1000000);
+  let longestRows = [];
+  const datasets = [];
+  servers.forEach((srv, i) => {
+    const rows = serverRows[i] || [];
+    if (rows.length > longestRows.length) longestRows = rows;
+    datasets.push(ds(`${srv.name} Entrada`, rows.map(r => toMbps(r.net_rx_delta || 0)), rxColors[i % rxColors.length], rxAlphas[i % rxAlphas.length]));
+    datasets.push(ds(`${srv.name} Salida`, rows.map(r => toMbps(r.net_tx_delta || 0)), txColors[i % txColors.length]));
+  });
   mk('chart-network', { type: 'line',
-    data: { labels: lbl(el18.length >= el316.length ? el18 : el316), datasets: [
-      ds('El 18 Entrada', el18.map(r => toMbps(r.net_rx_delta || 0)), C.blue, C.blueA),
-      ds('El 18 Salida', el18.map(r => toMbps(r.net_tx_delta || 0)), C.cyan),
-      ds('El 3 Entrada', el316.map(r => toMbps(r.net_rx_delta || 0)), C.orange, C.orangeA),
-      ds('El 3 Salida', el316.map(r => toMbps(r.net_tx_delta || 0)), C.yellow),
-    ]},
+    data: { labels: lbl(longestRows), datasets },
     options: opts({ y: { ...scaleY, beginAtZero: true, title: { display: true, text: 'Mbps', color: getScaleColors().tickColor, font: { size: 11 } } } })
   });
-  const rx18 = el18.length ? toMbps(el18[el18.length-1].net_rx_delta||0) : 0;
-  const rx316 = el316.length ? toMbps(el316[el316.length-1].net_rx_delta||0) : 0;
-  const max = Math.max(rx18, rx316);
-  if (max > 100) setDiag('chart-network', 'crit', `Tráfico de red en ${max.toFixed(0)} Mbps — posible transfer masivo o ataque.`);
-  else if (max > 50) setDiag('chart-network', 'warn', `Tráfico alto: El 18: ${rx18.toFixed(1)} Mbps, El 3: ${rx316.toFixed(1)} Mbps.`);
-  else setDiag('chart-network', 'ok', `Tráfico normal. El 18: ${rx18.toFixed(1)} Mbps, El 3: ${rx316.toFixed(1)} Mbps.`);
+  const vals = servers.map((srv, i) => {
+    const rows = serverRows[i] || [];
+    return { name: srv.name, val: rows.length ? toMbps(rows[rows.length-1].net_rx_delta||0) : 0 };
+  });
+  const max = Math.max(...vals.map(v => v.val));
+  const detail = vals.map(v => `${v.name}: ${v.val.toFixed(1)} Mbps`).join(', ');
+  if (max > 100) setDiag('chart-network', 'crit', `Tráfico de red en ${max.toFixed(0)} Mbps — posible transfer masivo.`);
+  else if (max > 50) setDiag('chart-network', 'warn', `Tráfico alto: ${detail}.`);
+  else setDiag('chart-network', 'ok', `Tráfico normal. ${detail}.`);
 }
 
 // ── Deadlocks ──
@@ -658,15 +715,28 @@ function renderTempFiles(rows) {
 }
 
 function renderAllCharts(data) {
-  renderCpuChart('chart-cpu-el18', data.el18);
-  renderCpuChart('chart-cpu-el316', data.el316);
-  renderMemChart('chart-mem-el18', data.el18);
-  renderMemChart('chart-mem-el316', data.el316);
-  renderJbossRss(data.el18, data.el316);
-  renderJbossThreads(data.el18, data.el316);
-  renderJbossCpu(data.el18, data.el316);
-  renderTcp8080('chart-tcp8080-el18', data.el18);
-  renderTcp8080('chart-tcp8080-el316', data.el316);
+  const servers = window.SITE_CONFIG ? window.SITE_CONFIG.servers : [];
+
+  // Per-server charts (CPU, RAM, TCP8080) — usan índice numérico
+  servers.forEach((srv, i) => {
+    const rows = data[srv.id] || [];
+    renderCpuChart(`chart-cpu-${i}`, rows);
+    renderMemChart(`chart-mem-${i}`, rows);
+    renderTcp8080(`chart-tcp8080-${i}`, rows);
+  });
+
+  // Multi-server charts — pasan array de arrays de rows
+  const serverRows = servers.map(srv => data[srv.id] || []);
+  renderJbossRss(serverRows);
+  renderJbossThreads(serverRows);
+  renderJbossCpu(serverRows);
+  renderTcp5432(serverRows);
+  renderLoad(serverRows);
+  renderDiskGauges(serverRows.map(rows => lastItem(rows)));
+  renderDiskIO(serverRows);
+  renderNetwork(serverRows);
+
+  // DB charts (unchanged — single source)
   renderDbConns(data.rds);
   renderCacheHit(data.rds);
   renderSlowQueries(data.rds);
@@ -674,9 +744,4 @@ function renderAllCharts(data) {
   renderTps(data.rds);
   renderDeadlocks(data.rds);
   renderTempFiles(data.rds);
-  renderTcp5432(data.el18, data.el316);
-  renderLoad(data.el18, data.el316);
-  renderDiskGauges(lastItem(data.el18), lastItem(data.el316));
-  renderDiskIO(data.el18, data.el316);
-  renderNetwork(data.el18, data.el316);
 }

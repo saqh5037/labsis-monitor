@@ -16,59 +16,49 @@ function getStatusCSS() {
 const STATUS_CSS = getStatusCSS();
 
 function renderCards(data) {
-  const el18 = lastItem(data.el18);
-  const el316 = lastItem(data.el316);
+  const servers = window.SITE_CONFIG ? window.SITE_CONFIG.servers : [];
   const rds = lastItem(data.rds);
   const cards = [];
 
-  if (el18) {
-    const cpuUsed = (100 - el18.cpu_idle).toFixed(1);
-    const st = getStatusColor('cpu_idle', el18.cpu_idle);
+  // Per-server cards: CPU, RAM, Disco
+  servers.forEach(srv => {
+    const row = lastItem(data[srv.id]);
+    if (!row) return;
+
+    // CPU
+    const cpuUsed = (100 - row.cpu_idle).toFixed(1);
+    const cpuSt = getStatusColor('cpu_idle', row.cpu_idle);
     cards.push({
-      label: 'CPU — El 18',
+      label: `CPU — ${srv.name}`,
       value: cpuUsed + '%',
-      status: st,
-      detail: `Uso: ${el18.cpu_user}% · AWS steal: ${el18.cpu_steal}%`,
-      context: st === 'green' ? 'Funcionando bien' : st === 'yellow' ? 'Algo saturado' : 'Muy saturado',
+      status: cpuSt,
+      detail: `Uso: ${row.cpu_user}% · Steal: ${row.cpu_steal}%`,
+      context: cpuSt === 'green' ? 'Funcionando bien' : cpuSt === 'yellow' ? 'Algo saturado' : 'Muy saturado',
     });
-  }
 
-  if (el316) {
-    const cpuUsed = (100 - el316.cpu_idle).toFixed(1);
-    const st = getStatusColor('cpu_idle', el316.cpu_idle);
+    // RAM
+    const memPct = ((row.mem_used_mb / row.mem_total_mb) * 100).toFixed(0);
+    const memSt = getStatusColor('mem_used_pct', parseFloat(memPct));
     cards.push({
-      label: 'CPU — El 3',
-      value: cpuUsed + '%',
-      status: st,
-      detail: `Uso: ${el316.cpu_user}% · AWS steal: ${el316.cpu_steal}%`,
-      context: st === 'green' ? 'Funcionando bien' : st === 'yellow' ? 'Algo saturado' : 'Muy saturado',
+      label: `RAM — ${srv.name}`,
+      value: memPct + '%',
+      status: memSt,
+      detail: `${formatMB(row.mem_used_mb)} de ${formatMB(row.mem_total_mb)}`,
+      context: memSt === 'green' ? 'Suficiente' : memSt === 'yellow' ? 'Vigilar' : 'Sin margen',
     });
-  }
 
-  if (el18) {
-    const pct = ((el18.mem_used_mb / el18.mem_total_mb) * 100).toFixed(0);
-    const st = getStatusColor('mem_used_pct', parseFloat(pct));
+    // Disco
+    const diskSt = getStatusColor('disk_pct', row.disk_root_pct);
     cards.push({
-      label: 'RAM — El 18',
-      value: pct + '%',
-      status: st,
-      detail: `${formatMB(el18.mem_used_mb)} de ${formatMB(el18.mem_total_mb)}`,
-      context: st === 'green' ? 'Suficiente' : st === 'yellow' ? 'Vigilar' : 'Sin margen',
+      label: `Disco — ${srv.name}`,
+      value: row.disk_root_pct + '%',
+      status: diskSt,
+      detail: `~${Math.round(srv.diskGB * (100 - row.disk_root_pct) / 100)} GB libres`,
+      context: diskSt === 'green' ? 'Espacio OK' : diskSt === 'yellow' ? 'Poco espacio' : 'Zona de peligro',
     });
-  }
+  });
 
-  if (el316) {
-    const pct = ((el316.mem_used_mb / el316.mem_total_mb) * 100).toFixed(0);
-    const st = getStatusColor('mem_used_pct', parseFloat(pct));
-    cards.push({
-      label: 'RAM — El 3',
-      value: pct + '%',
-      status: st,
-      detail: `${formatMB(el316.mem_used_mb)} de ${formatMB(el316.mem_total_mb)}`,
-      context: st === 'green' ? 'Suficiente' : st === 'yellow' ? 'Vigilar' : 'Sin margen',
-    });
-  }
-
+  // BD cards
   if (rds) {
     const st = getStatusColor('total_connections', rds.total_connections);
     cards.push({
@@ -76,7 +66,7 @@ function renderCards(data) {
       value: rds.total_connections,
       status: st,
       detail: `Trabajando: ${rds.active_conns} · Abandonadas: ${rds.idle_in_tx_conns}`,
-      context: `Máx permitido: 839 · Abandonadas debe ser 0`,
+      context: `Abandonadas debe ser 0`,
     });
   }
 
@@ -88,28 +78,6 @@ function renderCards(data) {
       status: st,
       detail: `Eficiencia de índices: ${rds.cache_hit_index_pct}%`,
       context: st === 'green' ? 'Velocidad óptima (>99%)' : 'Lento — debe ser >99%',
-    });
-  }
-
-  if (el18) {
-    const st = getStatusColor('disk_pct', el18.disk_root_pct);
-    cards.push({
-      label: 'Disco — El 18',
-      value: el18.disk_root_pct + '%',
-      status: st,
-      detail: `~${Math.round(32 * (100 - el18.disk_root_pct) / 100)} GB libres`,
-      context: st === 'green' ? 'Espacio OK' : st === 'yellow' ? 'Poco espacio' : 'Zona de peligro',
-    });
-  }
-
-  if (el316) {
-    const st = getStatusColor('disk_pct', el316.disk_root_pct);
-    cards.push({
-      label: 'Disco — El 3',
-      value: el316.disk_root_pct + '%',
-      status: st,
-      detail: `~${Math.round(32 * (100 - el316.disk_root_pct) / 100)} GB libres`,
-      context: st === 'green' ? 'Espacio OK' : st === 'yellow' ? 'Poco espacio' : 'Zona de peligro',
     });
   }
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Monitoreo LABSIS LAPI — Dynamtek</title>
+  <title>Monitoreo LABSIS — Dynamtek</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -12,7 +12,7 @@
 <body>
 
   <header class="header">
-    <div class="header-title">Monitoreo Infraestructura <span>LABSIS LAPI</span> — Dynamtek</div>
+    <div class="header-title">Monitoreo Infraestructura <span>LABSIS</span> — Dynamtek</div>
     <div class="header-status">
       <span><span class="status-dot loading" id="conn-dot"></span><span id="conn-text">Conectando...</span></span>
       <span id="last-update">—</span>
@@ -74,85 +74,14 @@
       </div>
     </div>
 
-    <!-- TAB: Servidores -->
+    <!-- TAB: Servidores (generado dinámicamente por JS) -->
     <div class="tab-panel" id="tab-servers">
-      <div class="charts-row">
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">CPU — Servidor El 18 <span class="ip-badge">18.224.139.66</span></div>
-            <div class="chart-desc">Qué tan ocupado está el procesador. Si la zona coloreada llega al 70%, el servidor empieza a ir lento. Arriba de 85% ya es crítico y los usuarios lo notan.</div>
-          </div>
-          <div class="chart-wrap"><canvas id="chart-cpu-el18"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">CPU — Servidor El 3 <span class="ip-badge">3.135.64.52</span></div>
-            <div class="chart-desc">Mismo indicador para El 3. Si ves mucho rojo (steal), significa que Amazon le está quitando capacidad al servidor. Si sube arriba de 5%, hay que pedir más recursos.</div>
-          </div>
-          <div class="chart-wrap"><canvas id="chart-cpu-el316"></canvas></div>
-        </div>
-      </div>
-      <div class="charts-row">
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Memoria RAM — Servidor El 18 <span class="ip-badge">18.224.139.66</span></div>
-            <div class="chart-desc">Cuánta memoria tiene disponible el servidor (32 GB en total). Lo <b style="color:#ef4444">rojo</b> = en uso, lo <b style="color:#06b6d4">azul claro</b> = reserva del sistema, lo <b style="color:#10b981">verde</b> = libre. Si lo rojo pasa del 85%, el servidor puede volverse lento.</div>
-          </div>
-          <div class="chart-wrap"><canvas id="chart-mem-el18"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Memoria RAM — Servidor El 3 <span class="ip-badge">3.135.64.52</span></div>
-            <div class="chart-desc">Memoria del servidor El 3. La aplicación LABSIS tiene 24 GB de heap asignados. Si la memoria en uso (rojo) pasa del 85%, no queda espacio para manejar picos de trabajo.</div>
-          </div>
-          <div class="chart-wrap"><canvas id="chart-mem-el316"></canvas></div>
-        </div>
-      </div>
+      <div class="no-data">Cargando configuración...</div>
     </div>
 
-    <!-- TAB: JBoss -->
+    <!-- TAB: JBoss (generado dinámicamente por JS) -->
     <div class="tab-panel" id="tab-jboss">
-      <div class="charts-row">
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Memoria de la Aplicación LABSIS (JBoss)</div>
-            <div class="chart-desc">Cuánta memoria consume la aplicación LABSIS en cada servidor. El 18 tiene límite de 12 GB y El 3 tiene límite de 24 GB. Si se acerca al límite, la aplicación se vuelve lenta porque tiene que liberar memoria constantemente.</div>
-          </div>
-          <div class="chart-wrap"><canvas id="chart-jboss-rss"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Peticiones Simultáneas (Threads)</div>
-            <div class="chart-desc">Cuántos usuarios están siendo atendidos al mismo tiempo. Si sube a más de 200, el sistema no puede atender a todos y los usuarios experimentan lentitud o errores.</div>
-          </div>
-          <div class="chart-wrap"><canvas id="chart-jboss-threads"></canvas></div>
-        </div>
-      </div>
-      <div class="charts-row">
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">CPU del Proceso LABSIS (%)</div>
-            <div class="chart-desc">Qué porcentaje del CPU consume únicamente la aplicación LABSIS. Si los threads suben pero el CPU de JBoss no, los threads están esperando respuesta de la base de datos (I/O bound).</div>
-          </div>
-          <div class="chart-wrap"><canvas id="chart-jboss-cpu"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-header">
-            <div class="chart-title">Conexiones de Usuarios — El 18 <span class="ip-badge">18.224.139.66</span></div>
-            <div class="chart-desc"><b style="color:#10b981">Verde</b> = usuarios conectados trabajando. <b style="color:#f59e0b">Amarillo</b> = desconectándose (normal). <b style="color:#ef4444">Rojo</b> = conexiones atoradas que no se cierran.</div>
-          </div>
-          <div class="chart-wrap"><canvas id="chart-tcp8080-el18"></canvas></div>
-        </div>
-      </div>
-      <div class="charts-row">
-        <div class="chart-card full">
-          <div class="chart-header">
-            <div class="chart-title">Conexiones de Usuarios — El 3 <span class="ip-badge">3.135.64.52</span></div>
-            <div class="chart-desc">Misma vista para El 3. Si ves barras rojas creciendo, significa que hay conexiones atoradas que el sistema no puede cerrar.</div>
-          </div>
-          <div class="chart-wrap"><canvas id="chart-tcp8080-el316"></canvas></div>
-        </div>
-      </div>
+      <div class="no-data">Cargando configuración...</div>
     </div>
 
     <!-- TAB: Base de Datos -->
@@ -344,7 +273,7 @@
     <!-- TAB: Reportes -->
     <div class="tab-panel" id="tab-reports">
       <div class="chart-title" style="margin-bottom:4px">Reportes para Entrega</div>
-      <div class="chart-desc" style="margin-bottom:20px">Genera reportes semanales listos para entregar al equipo de LAPI. Incluye disponibilidad, métricas de servidores, BD, incidentes y acciones de mantenimiento. Abre el reporte y usa Ctrl+P para guardarlo como PDF.</div>
+      <div class="chart-desc" style="margin-bottom:20px">Genera reportes semanales listos para entregar. Incluye disponibilidad, métricas de servidores, BD, incidentes y acciones de mantenimiento. Abre el reporte y usa Ctrl+P para guardarlo como PDF.</div>
       <div id="reports-container">
         <div class="no-data">Cargando reportes...</div>
       </div>

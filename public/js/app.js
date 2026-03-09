@@ -7,6 +7,7 @@ let sseActive = true;
 let compareMode = false;
 let compareData = null;
 window.currentUser = null;
+window.SITE_CONFIG = null; // Se carga desde /api/site-config
 
 // ── Auth helper ──
 function authFetch(url, options = {}) {
@@ -139,7 +140,120 @@ document.addEventListener('DOMContentLoaded', async () => {
   init();
 });
 
+async function loadSiteConfig() {
+  try {
+    const res = await authFetch('api/site-config');
+    window.SITE_CONFIG = await res.json();
+    // Título dinámico
+    document.title = `Monitoreo LABSIS ${window.SITE_CONFIG.siteName} — Dynamtek`;
+    const titleSpan = document.querySelector('.header-title span');
+    if (titleSpan) titleSpan.textContent = `LABSIS ${window.SITE_CONFIG.siteName}`;
+    // Generar contenedores de charts dinámicamente
+    initDynamicContainers();
+  } catch (e) {
+    console.error('Error cargando site-config:', e);
+    // Fallback mínimo
+    window.SITE_CONFIG = { siteName: 'LABSIS', servers: [{ id: 'srv', name: 'Servidor', ip: '', diskGB: 32, memGB: 32, heapGB: 12, appPort: 8080 }] };
+  }
+}
+
+function initDynamicContainers() {
+  const cfg = window.SITE_CONFIG;
+  if (!cfg) return;
+  const servers = cfg.servers;
+
+  // Tab Servidores — CPU + RAM charts per server
+  const serversTab = document.getElementById('tab-servers');
+  if (serversTab) {
+    let html = '';
+    // CPU charts — row with all servers
+    html += '<div class="charts-row">';
+    servers.forEach((srv, i) => {
+      html += `<div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">CPU — ${srv.name} ${srv.ip ? `<span class="ip-badge">${srv.ip}</span>` : ''}</div>
+          <div class="chart-desc">Qué tan ocupado está el procesador. Si la zona coloreada llega al 70%, el servidor empieza a ir lento. Arriba de 85% ya es crítico.</div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-cpu-${i}"></canvas></div>
+      </div>`;
+    });
+    html += '</div>';
+    // RAM charts
+    html += '<div class="charts-row">';
+    servers.forEach((srv, i) => {
+      html += `<div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Memoria RAM — ${srv.name} ${srv.ip ? `<span class="ip-badge">${srv.ip}</span>` : ''}</div>
+          <div class="chart-desc">Cuánta memoria tiene disponible el servidor (${srv.memGB} GB en total).</div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-mem-${i}"></canvas></div>
+      </div>`;
+    });
+    html += '</div>';
+    serversTab.innerHTML = html;
+  }
+
+  // Tab JBoss — multi-server charts + TCP per server
+  const jbossTab = document.getElementById('tab-jboss');
+  if (jbossTab) {
+    let html = '';
+    // JBoss RSS + Threads (multi-server)
+    html += `<div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Memoria de la Aplicación LABSIS (JBoss)</div>
+          <div class="chart-desc">Cuánta memoria consume LABSIS en cada servidor. Si se acerca al límite (heap), la aplicación se vuelve lenta.</div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-jboss-rss"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Peticiones Simultáneas (Threads)</div>
+          <div class="chart-desc">Cuántos usuarios están siendo atendidos al mismo tiempo. Si sube a más de 200, el sistema no puede atender a todos.</div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-jboss-threads"></canvas></div>
+      </div>
+    </div>`;
+    // JBoss CPU + TCP per server
+    html += '<div class="charts-row">';
+    html += `<div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">CPU del Proceso LABSIS (%)</div>
+        <div class="chart-desc">Qué porcentaje del CPU consume únicamente la aplicación LABSIS.</div>
+      </div>
+      <div class="chart-wrap"><canvas id="chart-jboss-cpu"></canvas></div>
+    </div>`;
+    // First TCP chart in same row
+    if (servers.length > 0) {
+      const srv = servers[0];
+      html += `<div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">Conexiones de Usuarios — ${srv.name} ${srv.ip ? `<span class="ip-badge">${srv.ip}</span>` : ''}</div>
+          <div class="chart-desc"><b style="color:#10b981">Verde</b> = conectados. <b style="color:#f59e0b">Amarillo</b> = desconectándose. <b style="color:#ef4444">Rojo</b> = atoradas.</div>
+        </div>
+        <div class="chart-wrap"><canvas id="chart-tcp8080-0"></canvas></div>
+      </div>`;
+    }
+    html += '</div>';
+    // Remaining TCP charts
+    for (let i = 1; i < servers.length; i++) {
+      const srv = servers[i];
+      html += `<div class="charts-row">
+        <div class="chart-card full">
+          <div class="chart-header">
+            <div class="chart-title">Conexiones de Usuarios — ${srv.name} ${srv.ip ? `<span class="ip-badge">${srv.ip}</span>` : ''}</div>
+            <div class="chart-desc">Misma vista para ${srv.name}. Barras rojas = conexiones atoradas.</div>
+          </div>
+          <div class="chart-wrap"><canvas id="chart-tcp8080-${i}"></canvas></div>
+        </div>
+      </div>`;
+    }
+    jbossTab.innerHTML = html;
+  }
+}
+
 async function init() {
+  await loadSiteConfig();
   try {
     const res = await authFetch('api/data');
     const data = await res.json();
@@ -265,15 +379,16 @@ function exportCurrentData() {
 
   // Determinar qué tab está activa para exportar el tipo correcto
   const activeTab = document.querySelector('.nav-tab.active');
-  let type = 'el18'; // default
+  const defaultServer = window.SITE_CONFIG ? window.SITE_CONFIG.servers[0].id : 'el18';
+  let type = defaultServer;
   if (activeTab) {
     const tab = activeTab.dataset.tab;
-    if (tab === 'servers') type = 'el18';
+    if (tab === 'servers') type = defaultServer;
     else if (tab === 'database') type = 'rds';
     else if (tab === 'queries') type = 'queries';
     else if (tab === 'health') type = 'events';
-    else if (tab === 'infra') type = 'el18';
-    else type = 'el18';
+    else if (tab === 'infra') type = defaultServer;
+    else type = defaultServer;
   }
 
   window.open(`api/export/${type}?from=${from}&to=${to}`, '_blank');
@@ -383,14 +498,14 @@ async function loadCompareData(preset, customFrom, customTo) {
 function renderAllChartsWithCompare() {
   if (!compareData) return;
   const prefix = compareData._label || 'Anterior';
+  const servers = window.SITE_CONFIG ? window.SITE_CONFIG.servers : [];
 
-  // Overlay en CPU charts
-  addCompareOverlay('chart-cpu-el18', compareData.el18, [
-    { key: 'cpu_user', label: `${prefix} User`, color: '#94a3b8' },
-  ]);
-  addCompareOverlay('chart-cpu-el316', compareData.el316, [
-    { key: 'cpu_user', label: `${prefix} User`, color: '#94a3b8' },
-  ]);
+  // Overlay en CPU charts per server
+  servers.forEach((srv, i) => {
+    addCompareOverlay(`chart-cpu-${i}`, compareData[srv.id], [
+      { key: 'cpu_user', label: `${prefix} User`, color: '#94a3b8' },
+    ]);
+  });
 
   // Overlay en DB Conns
   addCompareOverlay('chart-db-conns', compareData.rds, [
@@ -403,10 +518,12 @@ function renderAllChartsWithCompare() {
     { key: 'cache_hit_table_pct', label: `${prefix} Cache`, color: '#94a3b8' },
   ]);
 
-  // Overlay en JBoss threads
-  addCompareOverlay('chart-jboss-threads', compareData.el18, [
-    { key: 'jboss_threads', label: `${prefix} Threads`, color: '#94a3b8' },
-  ]);
+  // Overlay en JBoss threads (use first server)
+  if (servers.length) {
+    addCompareOverlay('chart-jboss-threads', compareData[servers[0].id], [
+      { key: 'jboss_threads', label: `${prefix} Threads`, color: '#94a3b8' },
+    ]);
+  }
 }
 
 function addCompareOverlay(chartId, rows, fields) {
