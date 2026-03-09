@@ -19,9 +19,7 @@ module.exports = {
           memGB: 32,
           heapGB: 12,
           appPort: 8080,
-          labsisCSV: "/tmp/labsis-monitor-el18.csv",
-          rdsCSV: "/tmp/rds-metrics-el316.csv",
-          backupPath: null
+          labsisCSV: "/tmp/labsis-monitor-ip-172-32-2-250.csv"
         },
         el316: {
           host: "3.135.64.52",
@@ -31,8 +29,11 @@ module.exports = {
           memGB: 64,
           heapGB: 24,
           appPort: 8080,
-          labsisCSV: "/tmp/labsis-monitor-el316.csv",
-          rdsCSV: "/tmp/rds-metrics-el316.csv",
+          labsisCSV: "/tmp/labsis-monitor-ip-172-32-2-166.csv",
+          rdsCSV: "/tmp/rds-metrics.csv",
+          slowLog: "/tmp/rds-slow-queries.log",
+          locksLog: "/tmp/rds-locks.log",
+          idleTxLog: "/tmp/rds-idle-in-tx.log",
           backupPath: "/home/dynamtek/labsis-backup"
         }
       }),
