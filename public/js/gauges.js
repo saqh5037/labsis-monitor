@@ -75,27 +75,31 @@ class SVGGauge {
       prevValue = t.value;
     }
 
-    // --- Major ticks only (5: at 0%, 25%, 50%, 75%, 100%) ---
+    // --- Ticks: 9 positions, labels only at major (0%, 25%, 50%, 75%, 100%) ---
     let ticksSvg = '';
-    const majorSteps = [0, 0.25, 0.5, 0.75, 1.0];
-    for (const pct of majorSteps) {
+    const allSteps = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0];
+    const labelSteps = new Set([0, 0.25, 0.5, 0.75, 1.0]);
+    for (const pct of allSteps) {
       const angle   = arcStart + pct * totalSweep;
       const radAngle = (angle - 90) * Math.PI / 180;
+      const isMajor = labelSteps.has(pct);
       const outerR  = radius + 3;
-      const innerR  = radius - 8;
+      const innerR  = isMajor ? radius - 8 : radius - 4;
       const labelR  = radius - 18;
       const tickValue = min + pct * (max - min);
 
       ticksSvg += `<line
   x1="${(cx + outerR * Math.cos(radAngle)).toFixed(2)}" y1="${(cy + outerR * Math.sin(radAngle)).toFixed(2)}"
   x2="${(cx + innerR * Math.cos(radAngle)).toFixed(2)}" y2="${(cy + innerR * Math.sin(radAngle)).toFixed(2)}"
-  stroke="currentColor" class="gauge-tick-line" stroke-width="1"/>`;
+  stroke="currentColor" class="gauge-tick-line" stroke-width="${isMajor ? 1 : 0.5}"/>`;
 
-      ticksSvg += `<text
+      if (isMajor) {
+        ticksSvg += `<text
   x="${(cx + labelR * Math.cos(radAngle)).toFixed(2)}"
   y="${(cy + labelR * Math.sin(radAngle)).toFixed(2)}"
   font-size="8" class="gauge-tick-label" text-anchor="middle" dominant-baseline="middle"
   font-family="'JetBrains Mono', 'Courier New', monospace">${Math.round(tickValue)}</text>`;
+      }
     }
 
     // --- Active arc (empty at render time, filled in setValue()) ---
@@ -115,10 +119,11 @@ class SVGGauge {
     // --- Hub (metallic chrome center) ---
     const hub = `<circle cx="${cx}" cy="${cy}" r="7" fill="url(#hubGrad-${id})"/>`;
 
-    // --- Readout, unit, label ---
-    const readoutY = cy + 32;
-    const unitY    = readoutY + 14;
-    const labelY   = unitY + 13;
+    // --- Readout, unit, status, label ---
+    const readoutY = cy + 36;
+    const unitY    = readoutY + 16;
+    const statusY  = unitY + 16;
+    const labelY   = statusY + 14;
 
     const readout = `<text x="${cx}" y="${readoutY}"
   class="gauge-readout"
@@ -130,6 +135,12 @@ class SVGGauge {
   font-size="10" class="gauge-unit"
   font-family="system-ui, sans-serif"
   text-anchor="middle" dominant-baseline="middle">${unit}</text>`;
+
+    const statusText = `<text x="${cx}" y="${statusY}"
+  font-size="9" font-weight="700" letter-spacing="1px"
+  font-family="system-ui, sans-serif"
+  text-anchor="middle" dominant-baseline="middle"
+  class="gauge-status-text" fill="#10b981">—</text>`;
 
     const labelText = `<text x="${cx}" y="${labelY}"
   font-size="11" class="gauge-label"
@@ -147,6 +158,7 @@ ${needle}
 ${hub}
 ${readout}
 ${unitText}
+${statusText}
 ${labelText}
 </svg>`;
 
@@ -199,6 +211,14 @@ ${labelText}
     if (needleGroup) {
       // setAttribute alone won't trigger CSS transition; switch to CSS transform
       needleGroup.style.transform = `rotate(${angle}deg)`;
+    }
+
+    // Update status text
+    const statusEl = this.container?.querySelector('.gauge-status-text');
+    if (statusEl) {
+      const statusWord = pct < 0.7 ? 'NORMAL' : pct < 0.85 ? 'ALERTA' : 'CRITICO';
+      statusEl.textContent = statusWord;
+      statusEl.setAttribute('fill', color);
     }
 
     // Update readout value with tween animation

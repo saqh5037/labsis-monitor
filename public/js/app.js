@@ -308,6 +308,20 @@ function initDynamicContainers() {
   }
 }
 
+// ── Ambient Engine ──
+window.ambientEngine = null;
+
+function initAmbient() {
+  try {
+    if (window.AmbientEngine) {
+      window.ambientEngine = new window.AmbientEngine();
+      window.ambientEngine.start();
+    }
+  } catch (e) {
+    console.warn('[Ambient] No se pudo inicializar:', e);
+  }
+}
+
 async function init() {
   await loadSiteConfig();
   try {
@@ -320,6 +334,7 @@ async function init() {
     setStatus('disconnected');
   }
   connectSSE();
+  initAmbient();
 
   // Start on overview
   setView('overview');
@@ -335,6 +350,8 @@ function connectSSE() {
       if (msg.type === 'update' && sseActive) {
         updateDashboard(msg.data);
         setStatus('connected');
+        // Notificar al motor de animaciones que llegó data fresca
+        try { if (window.ambientEngine) window.ambientEngine.onSSE(); } catch (e) {}
         // Update active view
         if (window.currentView === 'overview') {
           try { updateTopologyStatus(msg.data); } catch (e) {}

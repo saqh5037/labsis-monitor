@@ -55,7 +55,7 @@ function renderCarDashboard(serverId) {
   container.innerHTML = html;
 
   // Initialize gauges — fixed internal size, CSS handles responsive
-  const gaugeSize = 180;
+  const gaugeSize = 200;
 
   // Adjust load max based on server cores
   const loadPreset = { ...GAUGE_PRESETS.load };

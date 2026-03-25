@@ -35,14 +35,14 @@ function renderTopologyDiagram() {
   const numCols = colKeys.length;
   const maxPerCol = Math.max(...Object.values(columns).map(c => c.length));
 
-  // SVG dimensions (compact)
-  const colWidth = 180;
-  const rowHeight = 100;
+  // SVG dimensions
+  const colWidth = 250;
+  const rowHeight = 130;
   const padding = 30;
   const svgWidth = numCols * colWidth + padding * 2;
   const svgHeight = maxPerCol * rowHeight + padding * 2;
-  const nodeW = 140;
-  const nodeH = 70;
+  const nodeW = 180;
+  const nodeH = 90;
 
   // Assign positions
   const positions = {};
@@ -72,9 +72,36 @@ function renderTopologyDiagram() {
     <marker id="arrow" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="6" markerHeight="5" orient="auto-start-reverse">
       <path d="M 0 0 L 10 3 L 0 6 z" fill="var(--text3)"/>
     </marker>
+    <linearGradient id="grad-loadbalancer" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#6d28d9"/>
+    </linearGradient>
+    <linearGradient id="grad-app" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="grad-database" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#059669"/><stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="grad-storage" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
   </defs>`;
 
-  // Edges
+  // Zone backgrounds (per column, before edges)
+  const zoneColors = {
+    0: { fill: 'rgba(139,92,246,0.04)', label: 'ENTRADA' },
+    1: { fill: 'rgba(59,130,246,0.04)', label: 'APLICACION' },
+    2: { fill: 'rgba(5,150,105,0.04)', label: 'BASE DE DATOS' },
+    3: { fill: 'rgba(6,182,212,0.04)', label: 'ALMACENAMIENTO' },
+  };
+
+  colKeys.forEach((col, ci) => {
+    const zone = zoneColors[ci] || zoneColors[1];
+    const zx = padding / 2 + ci * colWidth;
+    svg += `<rect x="${zx}" y="${padding / 2}" width="${colWidth}" height="${svgHeight - padding}" rx="8" class="topology-zone" fill="${zone.fill}"/>`;
+    svg += `<text x="${zx + colWidth / 2}" y="${padding - 4}" class="topology-zone-label" text-anchor="middle" font-size="9" font-weight="600" letter-spacing="1">${zone.label}</text>`;
+  });
+
+  // Edges (glow behind + normal on top)
   edges.forEach(edge => {
     const from = positions[edge.from];
     const to = positions[edge.to];
@@ -87,6 +114,11 @@ function renderTopologyDiagram() {
     const dx = x2 - x1;
     const cpOffset = Math.max(30, Math.abs(dx) * 0.4);
 
+    // Glow edge (behind)
+    svg += `<path d="M ${x1} ${y1} C ${x1 + cpOffset} ${y1}, ${x2 - cpOffset} ${y2}, ${x2} ${y2}"
+      class="topology-edge-glow" fill="none" stroke="var(--primary)" stroke-width="6" opacity="0.12" stroke-linecap="round"/>`;
+
+    // Normal edge (on top)
     svg += `<path d="M ${x1} ${y1} C ${x1 + cpOffset} ${y1}, ${x2 - cpOffset} ${y2}, ${x2} ${y2}"
       class="topology-edge" marker-end="url(#arrow)"
       data-from="${edge.from}" data-to="${edge.to}"/>`;
@@ -105,23 +137,26 @@ function renderTopologyDiagram() {
       ${isClickable ? `onclick="setView('server-detail', {serverId:'${node.id}'})"` : ''}
       transform="translate(${pos.x}, ${pos.y})">`;
 
-    // Card background
-    svg += `<rect width="${nodeW}" height="${nodeH}" rx="12" class="topology-node-bg" filter="url(#topo-shadow)"/>`;
+    // Card background with gradient
+    svg += `<rect width="${nodeW}" height="${nodeH}" rx="12" fill="url(#grad-${node.type})" filter="url(#topo-shadow)" class="topology-node-bg"/>`;
 
     // Icon
     svg += `<g transform="translate(12, ${nodeH / 2 - 10})">${icon}</g>`;
 
-    // Labels
-    svg += `<text x="${nodeW / 2 + 8}" y="28" class="topology-node-label">${node.label}</text>`;
+    // Labels (adjusted Y for taller nodeH)
+    svg += `<text x="${nodeW / 2 + 8}" y="32" class="topology-node-label">${node.label}</text>`;
     if (node.host) {
-      svg += `<text x="${nodeW / 2 + 8}" y="43" class="topology-node-ip">${node.host}</text>`;
+      svg += `<text x="${nodeW / 2 + 8}" y="50" class="topology-node-ip">${node.host}</text>`;
     }
 
-    // Status dot (top-right)
-    svg += `<circle cx="${nodeW - 12}" cy="12" r="4" class="topology-status-dot" data-status-node="${node.id}" fill="var(--text3)"/>`;
+    // Glow ring (behind status dot)
+    svg += `<circle cx="${nodeW - 14}" cy="14" r="10" class="topology-status-glow" data-glow-node="${node.id}" fill="var(--text3)" opacity="0.15"/>`;
 
-    // Mini metric (centered below IP)
-    svg += `<text x="${nodeW / 2}" y="${nodeH - 8}" class="topology-mini-metric" data-metric-node="${node.id}" text-anchor="middle"></text>`;
+    // Status dot (top-right)
+    svg += `<circle cx="${nodeW - 14}" cy="14" r="6" class="topology-status-dot" data-status-node="${node.id}" fill="var(--text3)"/>`;
+
+    // Mini metric (CPU + RAM, centered below IP)
+    svg += `<text x="${nodeW / 2}" y="${nodeH - 10}" class="topology-mini-metric" data-metric-node="${node.id}" text-anchor="middle" font-size="11" font-weight="600"></text>`;
 
     svg += '</g>';
   });
@@ -191,20 +226,19 @@ function updateTopologyStatus(data) {
 
     const latest = serverData[serverData.length - 1];
 
-    // Update status dot
-    const dot = document.querySelector(`[data-status-node="${srv.id}"]`);
-    if (dot) {
-      const cpuUsed = 100 - (latest.cpu_idle || 100);
-      const color = cpuUsed > 85 ? 'var(--red)' : cpuUsed > 70 ? 'var(--yellow)' : 'var(--green)';
-      dot.setAttribute('fill', color);
-    }
+    const cpuUsed = 100 - (latest.cpu_idle || 100);
+    const memPct = latest.mem_total_mb > 0 ? (latest.mem_used_mb / latest.mem_total_mb * 100) : 0;
+    const color = cpuUsed > 85 ? 'var(--red)' : cpuUsed > 70 ? 'var(--yellow)' : 'var(--green)';
 
-    // Update mini metric
+    // Update status dot + glow
+    const dot = document.querySelector(`[data-status-node="${srv.id}"]`);
+    if (dot) dot.setAttribute('fill', color);
+    const glow = document.querySelector(`[data-glow-node="${srv.id}"]`);
+    if (glow) glow.setAttribute('fill', color);
+
+    // Update mini metric (2 values)
     const metric = document.querySelector(`[data-metric-node="${srv.id}"]`);
-    if (metric) {
-      const cpuUsed = 100 - (latest.cpu_idle || 100);
-      metric.textContent = `CPU ${cpuUsed.toFixed(0)}%`;
-    }
+    if (metric) metric.textContent = `CPU ${cpuUsed.toFixed(0)}% · RAM ${memPct.toFixed(0)}%`;
   });
 
   // Update DB node if exists
@@ -216,6 +250,8 @@ function updateTopologyStatus(data) {
       const cacheHit = latest.cache_hit_table_pct || 100;
       const color = cacheHit < 95 ? 'var(--red)' : cacheHit < 99 ? 'var(--yellow)' : 'var(--green)';
       dbDot.setAttribute('fill', color);
+      const dbGlow = document.querySelector('[data-glow-node="db"]');
+      if (dbGlow) dbGlow.setAttribute('fill', color);
     }
     const dbMetric = document.querySelector('[data-metric-node="db"]');
     if (dbMetric) {

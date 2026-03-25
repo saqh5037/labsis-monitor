@@ -187,9 +187,9 @@ body {
 
 /* ═══ Main ═══ */
 .main {
-  max-width: 1360px;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 20px 28px 60px;
+  padding: 16px 20px 40px;
 }
 
 /* ═══ Cards — Glass-2 ═══ */
@@ -1478,14 +1478,14 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
   --text2: #94a3b8;
   --text3: #64748b;
   --bg: #070b14;
-  --bg-card: rgba(15,23,42,0.65);
+  --bg-card: rgba(15,23,42,0.85);
   --bg-hover: rgba(30,58,95,0.35);
-  --border: rgba(99,130,190,0.12);
+  --border: rgba(99,130,190,0.18);
   --bg-code: rgba(8,12,24,0.8);
   --bg-footer: rgba(8,12,24,0.5);
   --overlay: rgba(0,0,0,0.7);
   --glass-blur: blur(24px) saturate(180%);
-  --glass-border: 1px solid rgba(99,130,190,0.15);
+  --glass-border: 1px solid rgba(99,130,190,0.2);
   --glass-shine: linear-gradient(135deg, rgba(99,130,190,0.12) 0%, transparent 40%, rgba(59,130,246,0.06) 100%);
   --shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 1px rgba(99,130,190,0.1);
   --shadow-md: 0 4px 16px rgba(0,0,0,0.45), 0 0 1px rgba(99,130,190,0.12);
@@ -1893,11 +1893,13 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
 }
 
 /* ── Dark Scrollbar ── */
+[data-theme="dark"] ::-webkit-scrollbar { width: 8px; }
 [data-theme="dark"] ::-webkit-scrollbar-thumb {
-  background: rgba(99,130,190,0.2);
+  background: rgba(99,130,190,0.35);
+  border-radius: 4px;
 }
 [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(99,130,190,0.35);
+  background: rgba(99,130,190,0.5);
 }
 
 /* ── Dark Audit ── */
@@ -2427,8 +2429,8 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
 [data-theme="dark"] .infographic-summary:hover { background: rgba(59,130,246,0.06); }
 
 [data-theme="dark"] #topology-container {
-  background: rgba(15,23,42,0.7);
-  border-color: rgba(99,130,190,0.08);
+  background: rgba(15,23,42,0.85);
+  border: 1px solid rgba(99,130,190,0.15);
 }
 [data-theme="dark"] .topology-node-bg { fill: rgba(15,23,42,0.8); stroke: rgba(99,130,190,0.15); }
 [data-theme="dark"] .topology-node:hover .topology-node-bg { stroke: var(--primary); }
@@ -2443,4 +2445,101 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
 [data-theme="dark"] .srv-service-chip {
   background: rgba(5,150,105,0.1);
   border-color: rgba(52,211,153,0.15);
+}
+
+/* ═══ Overview Grid Layout ═══ */
+#view-overview .main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+#view-overview .infographic-section:first-child {
+  grid-column: 1;
+}
+#view-overview #infographic-container {
+  grid-column: 2;
+}
+@media (max-width: 1200px) {
+  #view-overview .main {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ═══ Dark Mode — Gauges ═══ */
+[data-theme="dark"] .gauge-tick-label { fill: #94a3b8; }
+[data-theme="dark"] .gauge-readout { fill: #f1f5f9; }
+[data-theme="dark"] .gauge-unit { fill: #94a3b8; }
+[data-theme="dark"] .gauge-label { fill: #cbd5e1; }
+[data-theme="dark"] .gauge-tick-line { stroke: #475569; }
+[data-theme="dark"] .gauge-active-arc { filter: drop-shadow(0 0 8px currentColor); }
+
+/* ═══ Dark Mode — Car Dashboard ═══ */
+[data-theme="dark"] .car-gauge-slot {
+  background: rgba(15,23,42,0.85);
+  border: 1px solid rgba(99,130,190,0.15);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(99,130,190,0.06);
+}
+[data-theme="dark"] .car-spark-card,
+[data-theme="dark"] .car-stat {
+  background: rgba(15,23,42,0.85);
+  border: 1px solid rgba(99,130,190,0.12);
+}
+[data-theme="dark"] .car-quick-stats .car-stat-value { color: #e2e8f0; }
+
+/* ═══ Dark Mode — Topology Enhanced ═══ */
+[data-theme="dark"] .topology-edge { stroke: rgba(96,165,250,0.6); }
+[data-theme="dark"] .topology-edge-glow { stroke: rgba(96,165,250,0.2); }
+[data-theme="dark"] .topology-zone { fill-opacity: 0.06; }
+[data-theme="dark"] .topology-zone-label { fill: rgba(148,163,184,0.6); }
+
+/* ═══ Topology Particles ═══ */
+.topology-particle { fill: var(--green); opacity: 0.8; }
+.topology-particle.warn { fill: var(--yellow); }
+.topology-particle.crit { fill: var(--red); }
+
+/* ═══ Gauge Status Text ═══ */
+.gauge-status-text { font-weight: 700; letter-spacing: 1px; }
+[data-theme="dark"] .gauge-status-text { filter: drop-shadow(0 0 4px currentColor); }
+
+/* ═══ Ambient Engine ═══ */
+
+/* Scan line — las cards necesitan position:relative y overflow:hidden */
+.card, .chart-card, .car-gauge-slot, .infographic-details {
+  position: relative;
+  overflow: hidden;
+}
+.card::after, .chart-card::after, .car-gauge-slot::after, .infographic-details::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent calc(var(--shine-offset, -10%) - 12%),
+    rgba(255,255,255,0.06) var(--shine-offset, -10%),
+    rgba(255,255,255,0.12) calc(var(--shine-offset, -10%) + 4%),
+    rgba(255,255,255,0.06) calc(var(--shine-offset, -10%) + 8%),
+    transparent calc(var(--shine-offset, -10%) + 20%)
+  );
+  pointer-events: none;
+  transition: none;
+}
+[data-theme="dark"] .card::after,
+[data-theme="dark"] .chart-card::after,
+[data-theme="dark"] .car-gauge-slot::after,
+[data-theme="dark"] .infographic-details::after {
+  background: linear-gradient(
+    90deg,
+    transparent calc(var(--shine-offset, -10%) - 12%),
+    rgba(255,255,255,0.03) var(--shine-offset, -10%),
+    rgba(255,255,255,0.07) calc(var(--shine-offset, -10%) + 4%),
+    rgba(255,255,255,0.03) calc(var(--shine-offset, -10%) + 8%),
+    transparent calc(var(--shine-offset, -10%) + 20%)
+  );
+}
+
+/* Timestamp colon blink */
+.colon-blink {
+  transition: opacity 0.15s ease;
+  display: inline;
 }
