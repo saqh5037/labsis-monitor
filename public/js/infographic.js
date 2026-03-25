@@ -134,7 +134,7 @@ function renderServerCard(srv) {
     }
   }
 
-  return `<details class="infographic-details server-card" open>
+  return `<details class="infographic-details server-card">
     <summary class="server-card-header">
       <div class="server-card-info">
         <span class="server-card-name">${srv.name}</span>

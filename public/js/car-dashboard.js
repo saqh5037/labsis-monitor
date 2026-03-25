@@ -33,7 +33,10 @@ function renderCarDashboard(serverId) {
     </div>
   </div>`;
 
-  // Gauges grid
+  // Main content: gauges left + sidebar right
+  html += '<div class="car-main-layout">';
+
+  // Left: Gauges 3x2
   html += '<div class="car-gauges-grid">';
   html += '<div class="car-gauge-slot" id="gauge-cpu"></div>';
   html += '<div class="car-gauge-slot" id="gauge-ram"></div>';
@@ -43,19 +46,19 @@ function renderCarDashboard(serverId) {
   html += '<div class="car-gauge-slot" id="gauge-connections"></div>';
   html += '</div>';
 
-  // Sparklines
-  html += '<div class="car-sparklines">';
+  // Right sidebar: sparklines + quick stats stacked
+  html += '<div class="car-sidebar">';
   html += '<div class="car-spark-card"><div class="car-spark-title">CPU - Última hora</div><div class="car-spark-wrap"><canvas id="spark-cpu"></canvas></div></div>';
   html += '<div class="car-spark-card"><div class="car-spark-title">RAM - Última hora</div><div class="car-spark-wrap"><canvas id="spark-ram"></canvas></div></div>';
+  html += '<div class="car-quick-stats" id="car-quick-stats"></div>';
   html += '</div>';
 
-  // Quick stats
-  html += '<div class="car-quick-stats" id="car-quick-stats"></div>';
+  html += '</div>'; // car-main-layout
 
   container.innerHTML = html;
 
   // Initialize gauges — fixed internal size, CSS handles responsive
-  const gaugeSize = 200;
+  const gaugeSize = 180;
 
   // Adjust load max based on server cores
   const loadPreset = { ...GAUGE_PRESETS.load };

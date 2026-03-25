@@ -2293,11 +2293,27 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
 }
 
 /* Gauges Grid */
+/* Car Dashboard — Main layout: gauges left, sidebar right */
+.car-main-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+@media (max-width: 1100px) {
+  .car-main-layout { grid-template-columns: 1fr; }
+}
+
+.car-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .car-gauges-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 8px;
 }
 
 .car-gauge-slot {
@@ -2308,24 +2324,15 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: var(--glass-border);
-  border-radius: 14px;
-  padding: 16px;
-  box-shadow: var(--shadow-md);
+  border-radius: 12px;
+  padding: 10px 8px 6px;
+  box-shadow: var(--shadow);
   position: relative;
-  overflow: hidden;
-  aspect-ratio: 1;
-  max-height: 240px;
-}
-.car-gauge-slot::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--glass-shine);
-  pointer-events: none;
+  overflow: visible;
 }
 
 /* SVG Gauge styles */
-.gauge-svg { position: relative; z-index: 1; width: 100%; height: 100%; max-width: 180px; max-height: 180px; }
+.gauge-svg { position: relative; z-index: 1; width: 100%; height: auto; max-width: 200px; }
 .gauge-tick-label { fill: var(--text3); }
 .gauge-readout { fill: var(--text); }
 .gauge-label { fill: var(--text2); }
@@ -2333,13 +2340,7 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
 .gauge-needle-group { transition: transform 1.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .gauge-tick-line { stroke: var(--text3); }
 
-/* Sparklines */
-.car-sparklines {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 16px;
-}
+/* Sparklines (inside sidebar) */
 
 .car-spark-card {
   background: var(--bg-card);
@@ -2351,13 +2352,13 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
   box-shadow: var(--shadow);
 }
 .car-spark-title { font: 600 10px/1 var(--font-sans); color: var(--text2); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
-.car-spark-wrap { height: 70px; position: relative; }
+.car-spark-wrap { height: 90px; position: relative; }
 
 /* Quick Stats */
 .car-quick-stats {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
 }
 
 .car-stat {
@@ -2378,13 +2379,10 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
 /* Responsive */
 @media (max-width: 1024px) {
   .car-gauges-grid { grid-template-columns: repeat(3, 1fr); }
-  .car-quick-stats { grid-template-columns: repeat(3, 1fr); }
   .srv-details-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 768px) {
   .car-gauges-grid { grid-template-columns: repeat(2, 1fr); }
-  .car-sparklines { grid-template-columns: 1fr; }
-  .car-quick-stats { grid-template-columns: repeat(2, 1fr); }
   .srv-details-grid { grid-template-columns: 1fr; }
   .kpi-grid { grid-template-columns: repeat(3, 1fr); }
   .exec-header { flex-direction: column; text-align: center; }
@@ -2447,23 +2445,22 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
   border-color: rgba(52,211,153,0.15);
 }
 
-/* ═══ Overview Grid Layout ═══ */
+/* ═══ Overview Layout — Topology HERO full-width ═══ */
 #view-overview .main {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-  align-items: start;
 }
+/* Topology section: full-width hero */
 #view-overview .infographic-section:first-child {
-  grid-column: 1;
+  width: 100%;
 }
+#topology-container {
+  min-height: 320px;
+}
+/* Infographic cards below */
 #view-overview #infographic-container {
-  grid-column: 2;
-}
-@media (max-width: 1200px) {
-  #view-overview .main {
-    grid-template-columns: 1fr;
-  }
+  width: 100%;
 }
 
 /* ═══ Dark Mode — Gauges ═══ */
@@ -2504,12 +2501,12 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
 
 /* ═══ Ambient Engine ═══ */
 
-/* Scan line — las cards necesitan position:relative y overflow:hidden */
-.card, .chart-card, .car-gauge-slot, .infographic-details {
+/* Scan line — cards need position:relative and overflow:hidden */
+.card, .chart-card, .infographic-details {
   position: relative;
   overflow: hidden;
 }
-.card::after, .chart-card::after, .car-gauge-slot::after, .infographic-details::after {
+.card::after, .chart-card::after, .infographic-details::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -2526,7 +2523,6 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
 }
 [data-theme="dark"] .card::after,
 [data-theme="dark"] .chart-card::after,
-[data-theme="dark"] .car-gauge-slot::after,
 [data-theme="dark"] .infographic-details::after {
   background: linear-gradient(
     90deg,

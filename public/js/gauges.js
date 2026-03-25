@@ -119,31 +119,31 @@ class SVGGauge {
     // --- Hub (metallic chrome center) ---
     const hub = `<circle cx="${cx}" cy="${cy}" r="7" fill="url(#hubGrad-${id})"/>`;
 
-    // --- Readout, unit, status, label ---
-    const readoutY = cy + 36;
-    const unitY    = readoutY + 16;
-    const statusY  = unitY + 16;
-    const labelY   = statusY + 14;
+    // --- Readout, unit, status, label (compact stack below arc) ---
+    const readoutY = cy + 30;
+    const unitY    = readoutY + 13;
+    const statusY  = unitY + 13;
+    const labelY   = statusY + 12;
 
     const readout = `<text x="${cx}" y="${readoutY}"
   class="gauge-readout"
-  font-size="24" font-weight="700"
+  font-size="22" font-weight="700"
   font-family="'JetBrains Mono', 'Courier New', monospace"
   text-anchor="middle" dominant-baseline="middle">0</text>`;
 
     const unitText = `<text x="${cx}" y="${unitY}"
-  font-size="10" class="gauge-unit"
+  font-size="9" class="gauge-unit"
   font-family="system-ui, sans-serif"
   text-anchor="middle" dominant-baseline="middle">${unit}</text>`;
 
     const statusText = `<text x="${cx}" y="${statusY}"
-  font-size="9" font-weight="700" letter-spacing="1px"
+  font-size="8" font-weight="700" letter-spacing="1px"
   font-family="system-ui, sans-serif"
   text-anchor="middle" dominant-baseline="middle"
   class="gauge-status-text" fill="#10b981">—</text>`;
 
     const labelText = `<text x="${cx}" y="${labelY}"
-  font-size="11" class="gauge-label"
+  font-size="9" class="gauge-label"
   font-family="system-ui, sans-serif" letter-spacing="0.08em"
   text-anchor="middle" dominant-baseline="middle">${label.toUpperCase()}</text>`;
 
