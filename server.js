@@ -17,7 +17,23 @@ const QUERIES_INTERVAL = 300000;
 // Servidores configurados (mismo parsing que fetcher.js)
 const SERVERS_CONFIG = process.env.MONITOR_SERVERS
   ? JSON.parse(process.env.MONITOR_SERVERS)
-  : { el18: { host: '18.224.139.66', name: 'El 18' }, el316: { host: '3.135.64.52', name: 'El 3' } };
+  : {
+    el18: {
+      host: '18.224.139.66', name: 'El 18', ip: '18.224.139.66',
+      diskGB: 49, memGB: 32, heapGB: 12, appPort: 8080,
+      labsisCSV: '/tmp/labsis-monitor-ip-172-32-2-250.csv'
+    },
+    el316: {
+      host: '3.135.64.52', name: 'El 3', ip: '3.135.64.52',
+      diskGB: 49, memGB: 64, heapGB: 24, appPort: 8080,
+      labsisCSV: '/tmp/labsis-monitor-ip-172-32-2-166.csv',
+      rdsCSV: '/tmp/rds-metrics.csv',
+      slowLog: '/tmp/rds-slow-queries.log',
+      locksLog: '/tmp/rds-locks.log',
+      idleTxLog: '/tmp/rds-idle-in-tx.log',
+      backupPath: '/home/dynamtek/labsis-backup'
+    }
+  };
 const CONFIGURED_SERVERS = Object.keys(SERVERS_CONFIG);
 
 const app = express();
@@ -109,6 +125,46 @@ app.get('/api/site-config', (req, res) => {
       appPort: s.appPort || 8080,
     })),
   });
+});
+
+// API: Site info (extended) — server OS, Java, PG versions + client profile
+app.get('/api/site-info', async (req, res) => {
+  const clientInfo = process.env.CLIENT_INFO ? JSON.parse(process.env.CLIENT_INFO) : null;
+  const serverInfo = fetcher.getData().serverInfo || {};
+
+  const servers = Object.entries(SERVERS_CONFIG).map(([id, s]) => ({
+    id,
+    name: s.name || id,
+    ip: s.ip || s.host || '',
+    diskGB: s.diskGB || 32,
+    memGB: s.memGB || 32,
+    heapGB: s.heapGB || 12,
+    appPort: s.appPort || 8080,
+    ...(serverInfo[id] || {}),
+  }));
+
+  // Calcular summary
+  const totalMemGB = servers.reduce((sum, s) => sum + (s.memGB || 0), 0);
+  const totalDiskGB = servers.reduce((sum, s) => sum + (s.diskGB || 0), 0);
+
+  res.json({
+    client: clientInfo,
+    siteName: process.env.SITE_NAME || 'LABSIS',
+    servers,
+    summary: {
+      totalServers: servers.length,
+      totalMemGB,
+      totalDiskGB,
+    },
+  });
+});
+
+// API: Topology — server architecture diagram data
+app.get('/api/topology', (req, res) => {
+  const { buildTopology } = require('./lib/topology');
+  const topologyOverride = process.env.SITE_TOPOLOGY || null;
+  const topology = buildTopology(SERVERS_CONFIG, topologyOverride);
+  res.json(topology);
 });
 
 app.get('/api/users', requireAdmin, (req, res) => {
@@ -558,6 +614,14 @@ app.listen(PORT, BIND_HOST, async () => {
   console.log('[Init] Descargando datos de servidores...');
   await fetchAndBroadcast(true);
   console.log('[Init] Datos cargados. Auto-refresh cada 30s.');
+
+  // Fetch server info (OS, Java, etc.) — background, non-blocking
+  fetcher.fetchAllServerInfo().then(() => {
+    console.log('[Init] Server info recolectada.');
+  }).catch(e => console.error('[Init] Error server info:', e.message));
+
+  // Refresh server info cada 5 minutos
+  setInterval(() => fetcher.fetchAllServerInfo().catch(e => console.error('[ServerInfo] Error:', e.message)), 300000);
 
   fetchQueries();
   fetchBackupStatus();

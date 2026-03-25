@@ -16,6 +16,19 @@ module.exports = {
       PG_PASSWORD: "labsis",
       PG_SSL: "false",
       SITE_NAME: "Chontalpa QA",
+      CLIENT_INFO: JSON.stringify({
+        name: "Hospital General de Chontalpa",
+        shortName: "Chontalpa",
+        location: "Tabasco",
+        usersCount: 250,
+        samplesPerDay: 1200,
+        labisVersion: "13.2",
+        modules: ["Quimica", "Hematologia", "Inmunologia", "Microbiologia", "QC"]
+      }),
+      SITE_TOPOLOGY: JSON.stringify({
+        loadBalancer: { label: "GCP Load Balancer" },
+        database: { label: "Cloud SQL PostgreSQL", host: "10.216.144.3" }
+      }),
       MONITOR_SERVERS: JSON.stringify({
         qa1: {
           host: "10.128.0.6",

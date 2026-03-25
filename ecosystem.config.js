@@ -10,6 +10,23 @@ module.exports = {
       PORT: "3090",
       PG_PASSWORD: "labsis-lapi",
       SITE_NAME: "LAPI",
+      CLIENT_INFO: JSON.stringify({
+        name: "Laboratorio LAPI",
+        shortName: "LAPI",
+        location: "Ciudad de Mexico",
+        usersCount: 120,
+        samplesPerDay: 800,
+        labisVersion: "13.2",
+        modules: ["Quimica", "Hematologia", "Inmunologia", "QC"],
+        sla: "99.5%",
+        deployDate: "2024-06-15",
+        contractType: "Soporte Premium"
+      }),
+      SITE_TOPOLOGY: JSON.stringify({
+        loadBalancer: { label: "Nginx / ALB", host: "labsis.lapi.gob.mx" },
+        database: { label: "RDS PostgreSQL", host: "rds.us-east-2.amazonaws.com" },
+        storage: { label: "S3 Backups", bucket: "labsis-backup-lapi" }
+      }),
       MONITOR_SERVERS: JSON.stringify({
         el18: {
           host: "18.224.139.66",

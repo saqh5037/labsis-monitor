@@ -1,4 +1,4 @@
-// App — SSE + tabs + filtros de fecha + orquestación + auth
+// App — SSE + tabs + filtros de fecha + orquestación + auth + view system
 
 let currentLogType = 'slow';
 let currentRange = '24h';
@@ -8,6 +8,62 @@ let compareMode = false;
 let compareData = null;
 window.currentUser = null;
 window.SITE_CONFIG = null; // Se carga desde /api/site-config
+window.currentView = 'overview'; // 'overview' | 'dashboard' | 'server-detail'
+window.currentServerId = null;
+
+// ── View System ──
+function setView(name, params) {
+  const views = ['overview', 'dashboard', 'server-detail'];
+  views.forEach(v => {
+    const el = document.getElementById('view-' + v);
+    if (el) el.style.display = v === name ? '' : 'none';
+  });
+
+  window.currentView = name;
+
+  // Update nav buttons
+  document.querySelectorAll('.view-nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === name);
+  });
+
+  // Handle breadcrumb
+  const breadcrumb = document.getElementById('view-breadcrumb');
+  if (breadcrumb) {
+    if (name === 'server-detail' && params?.serverId) {
+      const srv = window.SITE_CONFIG?.servers?.find(s => s.id === params.serverId);
+      breadcrumb.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg> ${srv?.name || params.serverId}`;
+      breadcrumb.style.display = '';
+    } else {
+      breadcrumb.style.display = 'none';
+    }
+  }
+
+  // View-specific actions
+  if (name === 'overview') {
+    window.currentServerId = null;
+    Promise.all([
+      loadSiteInfo().catch(e => console.error('[Infographic]', e)),
+      loadTopology().catch(e => console.error('[Topology]', e)),
+    ]);
+  } else if (name === 'server-detail' && params?.serverId) {
+    window.currentServerId = params.serverId;
+    try {
+      renderCarDashboard(params.serverId);
+      // Trigger initial data immediately (don't wait for next SSE tick)
+      authFetch('api/data').then(r => r.json()).then(data => {
+        updateCarDashboard(params.serverId, data);
+        // Also update topology status dots for when user goes back
+        try { updateTopologyStatus(data); } catch(e) {}
+      }).catch(() => {});
+    } catch (e) { console.error('[CarDashboard]', e); }
+  } else if (name === 'dashboard') {
+    window.currentServerId = null;
+    // Resize charts after view switch
+    setTimeout(() => {
+      try { Object.values(charts).forEach(c => c.resize()); } catch (e) {}
+    }, 100);
+  }
+}
 
 // ── Auth helper ──
 function authFetch(url, options = {}) {
@@ -264,6 +320,9 @@ async function init() {
     setStatus('disconnected');
   }
   connectSSE();
+
+  // Start on overview
+  setView('overview');
 }
 
 function connectSSE() {
@@ -276,6 +335,12 @@ function connectSSE() {
       if (msg.type === 'update' && sseActive) {
         updateDashboard(msg.data);
         setStatus('connected');
+        // Update active view
+        if (window.currentView === 'overview') {
+          try { updateTopologyStatus(msg.data); } catch (e) {}
+        } else if (window.currentView === 'server-detail' && window.currentServerId) {
+          try { updateCarDashboard(window.currentServerId, msg.data); } catch (e) {}
+        }
       }
     } catch (e) {}
   };
