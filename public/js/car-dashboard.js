@@ -28,6 +28,7 @@ function renderCarDashboard(serverId) {
     <div class="car-server-info">
       <h2 class="car-server-name">${serverName}</h2>
       ${serverIP ? `<span class="ip-badge">${serverIP}</span>` : ''}
+      <span class="car-live-dot" id="car-live-dot" title="Datos en tiempo real"></span>
       <span class="car-uptime" id="car-uptime">—</span>
     </div>
   </div>`;
@@ -113,6 +114,14 @@ function updateCarDashboard(serverId, data) {
   if (!serverData || !serverData.length) return;
 
   const latest = serverData[serverData.length - 1];
+
+  // Flash live indicator
+  const liveDot = document.getElementById('car-live-dot');
+  if (liveDot) {
+    liveDot.classList.remove('car-live-flash');
+    void liveDot.offsetWidth; // force reflow
+    liveDot.classList.add('car-live-flash');
+  }
 
   // Update gauges
   const cpuUsed = 100 - (latest.cpu_idle || 100);

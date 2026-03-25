@@ -183,6 +183,15 @@ ${labelText}
     if (activeArc) {
       activeArc.setAttribute('d', this.describeArc(cx, cy, radius, arcStart, angle));
       activeArc.setAttribute('stroke', color);
+      // Pulse flash on data update
+      activeArc.style.transition = 'none';
+      activeArc.style.strokeWidth = '9';
+      activeArc.style.filter = `url(#glow-${id}) drop-shadow(0 0 6px ${color})`;
+      setTimeout(() => {
+        activeArc.style.transition = 'stroke-width 0.8s ease, filter 0.8s ease';
+        activeArc.style.strokeWidth = '6';
+        activeArc.style.filter = `url(#glow-${id})`;
+      }, 50);
     }
 
     // Update needle — use CSS transform for transition, setAttribute for initial pos
