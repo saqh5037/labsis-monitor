@@ -2203,14 +2203,13 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
   border-radius: 12px;
   padding: 16px;
   box-shadow: var(--shadow);
-  overflow-x: auto;
-  max-height: 360px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.topology-svg { max-width: 700px; max-height: 320px; height: auto; display: block; }
+.topology-svg { width: 100%; height: auto; display: block; }
 
 .topology-node-bg {
   fill: var(--bg-card);
@@ -2296,7 +2295,7 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
 /* Car Dashboard — Main layout: gauges left, sidebar right */
 .car-main-layout {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: 1fr 340px;
   gap: 12px;
   margin-bottom: 12px;
 }
@@ -2352,7 +2351,7 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
   box-shadow: var(--shadow);
 }
 .car-spark-title { font: 600 10px/1 var(--font-sans); color: var(--text2); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
-.car-spark-wrap { height: 90px; position: relative; }
+.car-spark-wrap { height: 120px; position: relative; }
 
 /* Quick Stats */
 .car-quick-stats {
@@ -2388,7 +2387,6 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
   .exec-header { flex-direction: column; text-align: center; }
   .server-card-header { flex-direction: column; gap: 8px; }
   .server-card-meta { justify-content: center; }
-  .topology-svg { max-width: 100%; }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -2456,7 +2454,7 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
   width: 100%;
 }
 #topology-container {
-  min-height: 320px;
+  min-height: 400px;
 }
 /* Infographic cards below */
 #view-overview #infographic-container {

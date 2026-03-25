@@ -203,6 +203,85 @@ function renderTopologyDiagram() {
       }, nodeEls.length * 150 + i * 120);
     });
   });
+
+  // ── Zoom & Pan ──
+  const svgEl = container.querySelector('.topology-svg');
+  if (svgEl) {
+    let scale = 1;
+    let panX = 0;
+    let panY = 0;
+    let isPanning = false;
+    let startX, startY;
+    const originalVB = svgEl.viewBox.baseVal;
+    const vbW = originalVB.width;
+    const vbH = originalVB.height;
+
+    // Wheel zoom
+    container.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 1.1 : 0.9;
+      const newScale = Math.max(0.5, Math.min(3, scale * delta));
+
+      // Zoom toward cursor position
+      const rect = svgEl.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left) / rect.width;
+      const mouseY = (e.clientY - rect.top) / rect.height;
+
+      const scaleDiff = newScale / scale;
+      panX = mouseX * vbW * (1 - scaleDiff) + panX * scaleDiff;
+      panY = mouseY * vbH * (1 - scaleDiff) + panY * scaleDiff;
+
+      scale = newScale;
+      updateViewBox();
+    }, { passive: false });
+
+    // Pan with mouse drag
+    container.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.topology-node-clickable')) return; // don't pan when clicking nodes
+      isPanning = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      container.style.cursor = 'grabbing';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isPanning) return;
+      const rect = svgEl.getBoundingClientRect();
+      const dx = (e.clientX - startX) / rect.width * vbW / scale;
+      const dy = (e.clientY - startY) / rect.height * vbH / scale;
+      panX -= dx;
+      panY -= dy;
+      startX = e.clientX;
+      startY = e.clientY;
+      updateViewBox();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isPanning) {
+        isPanning = false;
+        container.style.cursor = '';
+      }
+    });
+
+    // Double-click to reset
+    container.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.topology-node-clickable')) return;
+      scale = 1;
+      panX = 0;
+      panY = 0;
+      updateViewBox();
+    });
+
+    function updateViewBox() {
+      const w = vbW / scale;
+      const h = vbH / scale;
+      svgEl.setAttribute('viewBox', `${panX.toFixed(1)} ${panY.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`);
+    }
+
+    // Indicate zoom is available
+    container.style.cursor = 'grab';
+    container.title = 'Scroll para zoom · Arrastra para mover · Doble-click para resetear';
+  }
 }
 
 function getNodeIcon(type) {

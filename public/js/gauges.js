@@ -28,8 +28,8 @@ class SVGGauge {
     const { size, label, unit, min, max, thresholds, arcStart, arcEnd, format } = this.config;
     const id = this.id;
     const cx = size / 2;
-    const cy = size / 2;
-    const radius = size / 2 - 18;
+    const cy = size / 2 - 12;
+    const radius = size / 2 - 22;
     const totalSweep = arcEnd - arcStart; // 240°
 
     // --- SVG Defs: gradients + filters ---
@@ -148,7 +148,8 @@ class SVGGauge {
   text-anchor="middle" dominant-baseline="middle">${label.toUpperCase()}</text>`;
 
     // --- Assemble ---
-    const svg = `<svg viewBox="0 0 ${size} ${size}" class="gauge-svg" style="overflow:visible;">
+    const svgH = size + 30;
+    const svg = `<svg viewBox="0 0 ${size} ${svgH}" class="gauge-svg" style="overflow:visible;">
 ${defs}
 ${bgArc}
 ${segmentsSvg}
@@ -175,8 +176,8 @@ ${labelText}
 
     const size     = this.config.size;
     const cx       = size / 2;
-    const cy       = size / 2;
-    const radius   = size / 2 - 18;
+    const cy       = size / 2 - 12;
+    const radius   = size / 2 - 22;
     const totalSweep = arcEnd - arcStart;
     const pct    = (clampedValue - min) / (max - min);
     const angle  = arcStart + pct * totalSweep;
