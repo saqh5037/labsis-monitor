@@ -163,10 +163,10 @@ function renderTopologyDiagram() {
 
   svg += '</svg>';
 
-  // Build legend from site info
+  // Build legend + status key
   let legendHtml = '';
   try {
-    const siteInfo = siteInfoData; // from infographic.js global
+    const siteInfo = siteInfoData;
     if (siteInfo) {
       const { siteName, summary, client } = siteInfo;
       const name = client?.name || siteName || 'LABSIS';
@@ -177,6 +177,15 @@ function renderTopologyDiagram() {
       legendHtml = `<div style="text-align:center;padding:10px 0 4px;font:400 12px/1 var(--font-sans);color:var(--text3);letter-spacing:0.3px;">${name} · ${parts.join(' · ')}</div>`;
     }
   } catch(e) {}
+
+  // Status legend + zoom hint
+  legendHtml += `<div class="topology-legend">
+    <span class="topology-legend-item"><span class="topology-legend-dot" style="background:var(--green)"></span>Normal</span>
+    <span class="topology-legend-item"><span class="topology-legend-dot" style="background:var(--yellow)"></span>Alerta</span>
+    <span class="topology-legend-item"><span class="topology-legend-dot" style="background:var(--red)"></span>Critico</span>
+    <span class="topology-legend-sep">|</span>
+    <span class="topology-legend-hint">Scroll zoom · Arrastra · Doble-click reset</span>
+  </div>`;
 
   container.innerHTML = svg + legendHtml;
 
@@ -204,7 +213,7 @@ function renderTopologyDiagram() {
     });
   });
 
-  // ── Zoom & Pan ──
+  // ── Zoom & Pan (smooth, clamped) ──
   const svgEl = container.querySelector('.topology-svg');
   if (svgEl) {
     let scale = 1;
@@ -216,13 +225,13 @@ function renderTopologyDiagram() {
     const vbW = originalVB.width;
     const vbH = originalVB.height;
 
-    // Wheel zoom
+    // Wheel zoom — gentle sensitivity
     container.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? 1.1 : 0.9;
-      const newScale = Math.max(0.5, Math.min(3, scale * delta));
+      const delta = e.deltaY > 0 ? 1.04 : 0.96; // gentle steps
+      const newScale = Math.max(0.8, Math.min(2.5, scale * delta));
 
-      // Zoom toward cursor position
+      // Zoom toward cursor
       const rect = svgEl.getBoundingClientRect();
       const mouseX = (e.clientX - rect.left) / rect.width;
       const mouseY = (e.clientY - rect.top) / rect.height;
@@ -232,12 +241,13 @@ function renderTopologyDiagram() {
       panY = mouseY * vbH * (1 - scaleDiff) + panY * scaleDiff;
 
       scale = newScale;
+      clampPan();
       updateViewBox();
     }, { passive: false });
 
     // Pan with mouse drag
     container.addEventListener('mousedown', (e) => {
-      if (e.target.closest('.topology-node-clickable')) return; // don't pan when clicking nodes
+      if (e.target.closest('.topology-node-clickable')) return;
       isPanning = true;
       startX = e.clientX;
       startY = e.clientY;
@@ -253,6 +263,7 @@ function renderTopologyDiagram() {
       panY -= dy;
       startX = e.clientX;
       startY = e.clientY;
+      clampPan();
       updateViewBox();
     });
 
@@ -263,14 +274,26 @@ function renderTopologyDiagram() {
       }
     });
 
-    // Double-click to reset
+    // Double-click to reset with smooth transition
     container.addEventListener('dblclick', (e) => {
       if (e.target.closest('.topology-node-clickable')) return;
       scale = 1;
       panX = 0;
       panY = 0;
+      svgEl.style.transition = 'all 0.3s ease';
       updateViewBox();
+      setTimeout(() => { svgEl.style.transition = ''; }, 350);
     });
+
+    function clampPan() {
+      // Don't let user pan beyond content bounds
+      const w = vbW / scale;
+      const h = vbH / scale;
+      const maxPanX = vbW - w;
+      const maxPanY = vbH - h;
+      panX = Math.max(Math.min(maxPanX, 0), Math.min(panX, Math.max(maxPanX, 0)));
+      panY = Math.max(Math.min(maxPanY, 0), Math.min(panY, Math.max(maxPanY, 0)));
+    }
 
     function updateViewBox() {
       const w = vbW / scale;
@@ -278,9 +301,7 @@ function renderTopologyDiagram() {
       svgEl.setAttribute('viewBox', `${panX.toFixed(1)} ${panY.toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)}`);
     }
 
-    // Indicate zoom is available
     container.style.cursor = 'grab';
-    container.title = 'Scroll para zoom · Arrastra para mover · Doble-click para resetear';
   }
 }
 

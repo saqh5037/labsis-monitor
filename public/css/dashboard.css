@@ -2496,6 +2496,37 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
 .gauge-status-text { font-weight: 700; letter-spacing: 1px; }
 [data-theme="dark"] .gauge-status-text { filter: drop-shadow(0 0 4px currentColor); }
 
+/* ═══ Topology Legend ═══ */
+.topology-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0 2px;
+  font: 400 11px/1 var(--font-sans);
+  color: var(--text3);
+}
+.topology-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.topology-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.topology-legend-sep {
+  color: var(--border);
+  font-weight: 300;
+}
+.topology-legend-hint {
+  font-size: 10px;
+  color: var(--text3);
+  opacity: 0.6;
+}
+
 /* ═══ Ambient Engine ═══ */
 
 /* Scan line — cards need position:relative and overflow:hidden */
