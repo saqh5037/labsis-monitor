@@ -2211,20 +2211,20 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
 .topology-svg { width: 100%; height: auto; display: block; margin: 0 auto; }
 
 .topology-node-bg {
-  fill: var(--bg-card);
-  stroke: var(--border);
-  stroke-width: 1;
+  /* fill set inline by JS — do NOT override here */
+  stroke: none;
 }
 .topology-node:hover .topology-node-bg {
-  stroke: var(--primary);
-  stroke-width: 1.5;
+  stroke: rgba(255,255,255,0.3);
+  stroke-width: 2;
 }
 .topology-node-clickable { cursor: pointer; }
 .topology-node-clickable:hover { filter: brightness(1.02); }
 
-.topology-node-label { font: 600 11px var(--font-sans); fill: var(--text); text-anchor: middle; }
-.topology-node-ip { font: 400 9px var(--font-mono); fill: var(--text3); text-anchor: middle; }
-.topology-mini-metric { font: 600 9px var(--font-mono); fill: var(--text2); }
+/* topology text styles — colors set inline in SVG JS, only font here */
+.topology-node-label { font-family: var(--font-sans); }
+.topology-node-ip { font-family: var(--font-mono); }
+.topology-mini-metric { font-family: var(--font-mono); }
 
 .topology-edge {
   fill: none;
@@ -2427,8 +2427,8 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
   background: rgba(15,23,42,0.85);
   border: 1px solid rgba(99,130,190,0.15);
 }
-[data-theme="dark"] .topology-node-bg { fill: rgba(15,23,42,0.8); stroke: rgba(99,130,190,0.15); }
-[data-theme="dark"] .topology-node:hover .topology-node-bg { stroke: var(--primary); }
+[data-theme="dark"] .topology-node-bg { /* fill set inline by JS */ stroke: none; }
+[data-theme="dark"] .topology-node:hover .topology-node-bg { stroke: rgba(255,255,255,0.2); }
 [data-theme="dark"] .topology-node-label { fill: #e2e8f0; }
 
 [data-theme="dark"] .car-back-btn {
