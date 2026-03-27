@@ -25,7 +25,7 @@ function renderTopologyDiagram() {
   // === Dimensions ===
   const entryW = 185, entryH = 115;
   const srvW = 210, srvH = 180;
-  const dbW = 210, dbH = 155;
+  const dbW = 210, dbH = 175;
   const stW = 185, stH = 110;
   const pad = 35;
   const zoneGap = 25;
@@ -204,29 +204,36 @@ function renderTopologyDiagram() {
       // IP
       svg += `<text x="38" y="32" font-size="10" fill="white" opacity="0.9" font-family="'JetBrains Mono',monospace">${node.host}</text>`;
 
-      // Role badge
+      // Role badge — white outline style to avoid color clash with status dots
       const rl = { production: 'PROD', qa: 'QA', spare: 'SPARE' }[node.role] || '';
-      const rc = { production: '#34d399', qa: '#fbbf24', spare: '#9ca3af' }[node.role] || '#9ca3af';
       if (rl) {
-        svg += `<rect x="${nw-48}" y="8" width="40" height="16" rx="4" fill="${rc}"/>`;
-        svg += `<text x="${nw-28}" y="19" text-anchor="middle" font-size="8" font-weight="800" fill="#1e293b" letter-spacing="0.5">${rl}</text>`;
+        svg += `<rect x="${nw-48}" y="8" width="40" height="16" rx="4" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>`;
+        svg += `<text x="${nw-28}" y="19" text-anchor="middle" font-size="7.5" font-weight="700" fill="white" letter-spacing="0.8">${rl}</text>`;
       }
 
       // Separator line
       svg += `<line x1="12" y1="42" x2="${nw-12}" y2="42" stroke="white" stroke-width="0.5" opacity="0.2"/>`;
 
-      // App chips (max 5)
+      // App list (max 5) — small inline dots, not confused with status
       if (node.apps && node.apps.length) {
         let ay = 58;
         node.apps.slice(0, 5).forEach(app => {
-          const sc = app.status === 'active' ? '#34d399' : app.status === 'anomaly' ? '#fbbf24' : app.status === 'prepared' ? '#93c5fd' : '#9ca3af';
+          // Status: filled for active, outline for prepared, warning for anomaly
+          if (app.status === 'active') {
+            svg += `<circle cx="18" cy="${ay}" r="3" fill="none" stroke="#86efac" stroke-width="1.5"/>`;
+          } else if (app.status === 'anomaly') {
+            svg += `<circle cx="18" cy="${ay}" r="3" fill="#fbbf24"/>`;
+          } else if (app.status === 'prepared') {
+            svg += `<circle cx="18" cy="${ay}" r="3" fill="none" stroke="#93c5fd" stroke-width="1.5"/>`;
+          } else {
+            svg += `<circle cx="18" cy="${ay}" r="3" fill="none" stroke="#9ca3af" stroke-width="1"/>`;
+          }
           const pt = app.port ? ` :${app.port}` : '';
-          svg += `<circle cx="18" cy="${ay}" r="4" fill="${sc}"/>`;
-          svg += `<text x="28" y="${ay+4}" font-size="10" fill="white">${app.name}${pt}</text>`;
+          svg += `<text x="28" y="${ay+4}" font-size="10" fill="white" opacity="0.95">${app.name}${pt}</text>`;
           ay += 17;
         });
         if (node.apps.length > 5) {
-          svg += `<text x="28" y="${ay+3}" font-size="8" fill="white" opacity="0.7">+${node.apps.length-5} mas</text>`;
+          svg += `<text x="28" y="${ay+3}" font-size="8" fill="white" opacity="0.6">+${node.apps.length-5} mas</text>`;
         }
       }
 
@@ -250,10 +257,10 @@ function renderTopologyDiagram() {
       // Host
       const hShort = node.host ? (node.host.length > 24 ? node.host.substring(0,22)+'..' : node.host) : '';
       svg += `<text x="38" y="30" font-size="8" fill="white" opacity="0.8" font-family="'JetBrains Mono',monospace">${hShort}</text>`;
-      // Env badge
+      // Env badge — outline style like role badges
       if (node.env) {
-        svg += `<rect x="12" y="40" width="68" height="16" rx="4" fill="#34d399"/>`;
-        svg += `<text x="46" y="51" text-anchor="middle" font-size="8.5" font-weight="800" fill="#064e3b">${node.env.toUpperCase()}</text>`;
+        svg += `<rect x="12" y="40" width="80" height="16" rx="4" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>`;
+        svg += `<text x="52" y="51" text-anchor="middle" font-size="8" font-weight="700" fill="white" letter-spacing="0.8">${node.env.toUpperCase()}</text>`;
       }
       // Separator
       svg += `<line x1="12" y1="62" x2="${nw-12}" y2="62" stroke="white" stroke-width="0.5" opacity="0.2"/>`;
@@ -261,20 +268,21 @@ function renderTopologyDiagram() {
       if (node.datasources && node.datasources.length) {
         let dy = 78;
         node.datasources.forEach(ds => {
-          svg += `<text x="14" y="${dy}" font-size="8.5" fill="white">${ds.name}</text>`;
-          svg += `<text x="${nw-14}" y="${dy}" text-anchor="end" font-size="8" fill="white" opacity="0.7">pool ${ds.pool}</text>`;
+          svg += `<text x="14" y="${dy}" font-size="8.5" fill="white" opacity="0.95">${ds.name}</text>`;
+          svg += `<text x="${nw-14}" y="${dy}" text-anchor="end" font-size="8" fill="white" opacity="0.65">pool ${ds.pool}</text>`;
           dy += 14;
         });
       }
-      // QA note
+      // QA note — positioned above the metric line with clear spacing
       if (node.qaNote) {
-        svg += `<rect x="8" y="${nh-26}" width="${nw-16}" height="18" rx="5" fill="#fbbf24"/>`;
-        svg += `<text x="${nw/2}" y="${nh-14}" text-anchor="middle" font-size="7.5" font-weight="700" fill="#7c2d12">${node.qaNote}</text>`;
+        svg += `<rect x="8" y="${nh-44}" width="${nw-16}" height="18" rx="5" fill="rgba(251,191,36,0.2)" stroke="#fbbf24" stroke-width="0.5"/>`;
+        svg += `<text x="${nw/2}" y="${nh-32}" text-anchor="middle" font-size="7.5" font-weight="600" fill="#fde68a">${node.qaNote}</text>`;
       }
-      // Status
+      // Status dot
       svg += `<circle cx="${nw-14}" cy="14" r="9" data-glow-node="${node.id}" fill="white" opacity="0.2"/>`;
       svg += `<circle cx="${nw-14}" cy="14" r="6" class="topology-status-dot" data-status-node="${node.id}" fill="#9ca3af"/>`;
-      svg += `<text x="${nw/2}" y="${nh-4}" class="topology-mini-metric" data-metric-node="${node.id}" text-anchor="middle" font-size="11" font-weight="700" fill="white"></text>`;
+      // Mini metric — at the very bottom, clear space
+      svg += `<text x="${nw/2}" y="${nh-8}" class="topology-mini-metric" data-metric-node="${node.id}" text-anchor="middle" font-size="11" font-weight="700" fill="white"></text>`;
     }
 
     if (node.type === 'storage') {
