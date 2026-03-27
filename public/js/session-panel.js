@@ -104,7 +104,7 @@
   function renderEquipmentTable(data, container) {
     const equipment = Array.isArray(data) ? data : (data.equipment || data.equipos || []);
     const activeCount = equipment.filter(e => e.isActive || e.activo || e.active || e.status === 'active').length;
-    const total = equipment.length;
+    const total = data.totalRegistered || equipment.length;
 
     let html = `
       <div class="session-summary-row">
