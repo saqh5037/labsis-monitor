@@ -115,19 +115,20 @@ function renderTopologyDiagram() {
   let svg = `<svg viewBox="0 0 ${totalW} ${totalH}" class="topology-svg" xmlns="http://www.w3.org/2000/svg">`;
 
   svg += `<defs>
-    <filter id="ts" x="-8%" y="-8%" width="116%" height="124%">
-      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="rgba(30,58,95,0.10)"/>
-    </filter>
-    <marker id="arr" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="6" markerHeight="5" orient="auto-start-reverse">
-      <path d="M0 0L10 3L0 6z" fill="var(--text3)"/>
+    <marker id="arr" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="7" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0L10 3L0 6z" fill="#64748b"/>
     </marker>
-    <linearGradient id="g-prod" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1e40af"/><stop offset="100%" stop-color="#1e3a8a"/></linearGradient>
-    <linearGradient id="g-qa" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#b45309"/><stop offset="100%" stop-color="#92400e"/></linearGradient>
-    <linearGradient id="g-spare" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4b5563"/><stop offset="100%" stop-color="#374151"/></linearGradient>
-    <linearGradient id="g-db" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#065f46"/><stop offset="100%" stop-color="#064e3b"/></linearGradient>
-    <linearGradient id="g-st" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#155e75"/><stop offset="100%" stop-color="#164e63"/></linearGradient>
-    <linearGradient id="g-entry" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#5b21b6"/><stop offset="100%" stop-color="#4c1d95"/></linearGradient>
   </defs>`;
+
+  // Solid fill colors (no gradients, no filters — maximum contrast)
+  const fills = {
+    prod: '#1e3a5f',
+    qa: '#7c2d12',
+    spare: '#374151',
+    db: '#064e3b',
+    st: '#134e4a',
+    entry: '#4c1d95',
+  };
 
   // === Zone backgrounds ===
   const zoneDefs = [
@@ -154,10 +155,8 @@ function renderTopologyDiagram() {
     const isDash = edge.style === 'dashed';
     const da = isDash ? 'stroke-dasharray="8 5"' : '';
 
-    // Glow
-    svg += `<path d="M${x1} ${y1}C${x1+cp} ${y1},${x2-cp} ${y2},${x2} ${y2}" fill="none" stroke="var(--primary)" stroke-width="6" opacity="0.08" stroke-linecap="round" ${da}/>`;
-    // Edge line
-    svg += `<path d="M${x1} ${y1}C${x1+cp} ${y1},${x2-cp} ${y2},${x2} ${y2}" fill="none" stroke="${isDash ? 'var(--text3)' : 'var(--primary)'}" stroke-width="${isDash ? '1.5' : '2'}" opacity="${isDash ? '0.4' : '0.5'}" marker-end="url(#arr)" ${da} data-from="${edge.from}" data-to="${edge.to}" class="topology-edge"/>`;
+    // Edge line — solid colors, visible
+    svg += `<path d="M${x1} ${y1}C${x1+cp} ${y1},${x2-cp} ${y2},${x2} ${y2}" fill="none" stroke="${isDash ? '#94a3b8' : '#3b82f6'}" stroke-width="${isDash ? '1.5' : '2.5'}" opacity="${isDash ? '0.5' : '0.6'}" marker-end="url(#arr)" ${da} data-from="${edge.from}" data-to="${edge.to}" class="topology-edge"/>`;
   });
 
   // === Render nodes ===
@@ -167,122 +166,129 @@ function renderTopologyDiagram() {
     const { w: nw, h: nh } = p;
     const isClick = node.type === 'app';
 
-    let grad = 'url(#g-prod)';
-    if (node.type === 'entrypoint') grad = 'url(#g-entry)';
-    else if (node.role === 'qa') grad = 'url(#g-qa)';
-    else if (node.role === 'spare') grad = 'url(#g-spare)';
-    else if (node.type === 'database') grad = 'url(#g-db)';
-    else if (node.type === 'storage') grad = 'url(#g-st)';
+    let bgColor = fills.prod;
+    if (node.type === 'entrypoint') bgColor = fills.entry;
+    else if (node.role === 'qa') bgColor = fills.qa;
+    else if (node.role === 'spare') bgColor = fills.spare;
+    else if (node.type === 'database') bgColor = fills.db;
+    else if (node.type === 'storage') bgColor = fills.st;
 
     const icon = getNodeIcon(node.type, node.subtype);
 
     svg += `<g class="topology-node ${isClick?'topology-node-clickable':''}" data-node-id="${node.id}" ${isClick?`onclick="setView('server-detail',{serverId:'${node.id}'})"`:''} transform="translate(${p.x},${p.y})">`;
 
-    // Card
-    svg += `<rect width="${nw}" height="${nh}" rx="14" fill="${grad}" filter="url(#ts)" class="topology-node-bg"/>`;
+    // Card — solid fill, no filter
+    svg += `<rect width="${nw}" height="${nh}" rx="12" fill="${bgColor}" class="topology-node-bg"/>`;
 
-    // Icon (larger)
-    svg += `<g transform="translate(${nw/2 - 18}, 10) scale(1.8)">${icon}</g>`;
+    // Icon — top-left, natural size
+    svg += `<g transform="translate(12, 12)">${icon}</g>`;
 
     // === Type-specific content ===
 
     if (node.type === 'entrypoint') {
-      svg += `<text x="${nw/2}" y="52" text-anchor="middle" font-size="12" font-weight="700" fill="white">${node.label}</text>`;
-      // Live session count
-      svg += `<text x="${nw/2}" y="76" text-anchor="middle" font-size="24" font-weight="800" fill="white" data-session-node="${node.id}">...</text>`;
+      svg += `<text x="38" y="24" font-size="12" font-weight="700" fill="white">${node.label}</text>`;
+      // Live session count — big centered
+      svg += `<text x="${nw/2}" y="62" text-anchor="middle" font-size="28" font-weight="800" fill="white" data-session-node="${node.id}">...</text>`;
       // Description
-      const desc = node.desc || (node.count ? 'usuarios activos' : node.protocol || '');
-      svg += `<text x="${nw/2}" y="92" text-anchor="middle" font-size="9" fill="white" opacity="0.75">${desc}</text>`;
+      const desc = node.desc || (node.count ? 'sesiones activas' : node.protocol || '');
+      svg += `<text x="${nw/2}" y="82" text-anchor="middle" font-size="9.5" fill="white" opacity="0.85">${desc}</text>`;
       // Subtitle
       if (node.protocol && node.desc) {
-        svg += `<text x="${nw/2}" y="106" text-anchor="middle" font-size="8.5" fill="white" opacity="0.6">${node.protocol}</text>`;
+        svg += `<text x="${nw/2}" y="100" text-anchor="middle" font-size="9" fill="white" opacity="0.7">${node.protocol}</text>`;
       }
     }
 
     if (node.type === 'app') {
-      // Name
-      svg += `<text x="${nw/2}" y="50" text-anchor="middle" font-size="14" font-weight="700" fill="white">${node.label}</text>`;
+      // Name — right of icon
+      svg += `<text x="38" y="18" font-size="15" font-weight="700" fill="white">${node.label}</text>`;
       // IP
-      svg += `<text x="${nw/2}" y="64" text-anchor="middle" font-size="10" fill="white" opacity="0.8" font-family="'JetBrains Mono',monospace">${node.host}</text>`;
+      svg += `<text x="38" y="32" font-size="10" fill="white" opacity="0.9" font-family="'JetBrains Mono',monospace">${node.host}</text>`;
 
       // Role badge
       const rl = { production: 'PROD', qa: 'QA', spare: 'SPARE' }[node.role] || '';
       const rc = { production: '#34d399', qa: '#fbbf24', spare: '#9ca3af' }[node.role] || '#9ca3af';
       if (rl) {
-        svg += `<rect x="${nw-48}" y="5" width="40" height="16" rx="4" fill="${rc}"/>`;
-        svg += `<text x="${nw-28}" y="16" text-anchor="middle" font-size="8" font-weight="800" fill="#1e293b" letter-spacing="0.5">${rl}</text>`;
+        svg += `<rect x="${nw-48}" y="8" width="40" height="16" rx="4" fill="${rc}"/>`;
+        svg += `<text x="${nw-28}" y="19" text-anchor="middle" font-size="8" font-weight="800" fill="#1e293b" letter-spacing="0.5">${rl}</text>`;
       }
+
+      // Separator line
+      svg += `<line x1="12" y1="42" x2="${nw-12}" y2="42" stroke="white" stroke-width="0.5" opacity="0.2"/>`;
 
       // App chips (max 5)
       if (node.apps && node.apps.length) {
-        let ay = 80;
+        let ay = 58;
         node.apps.slice(0, 5).forEach(app => {
           const sc = app.status === 'active' ? '#34d399' : app.status === 'anomaly' ? '#fbbf24' : app.status === 'prepared' ? '#93c5fd' : '#9ca3af';
           const pt = app.port ? ` :${app.port}` : '';
-          svg += `<circle cx="16" cy="${ay}" r="4" fill="${sc}"/>`;
-          svg += `<text x="26" y="${ay+4}" font-size="9.5" fill="white" font-weight="500">${app.name}${pt}</text>`;
-          ay += 16;
+          svg += `<circle cx="18" cy="${ay}" r="4" fill="${sc}"/>`;
+          svg += `<text x="28" y="${ay+4}" font-size="10" fill="white">${app.name}${pt}</text>`;
+          ay += 17;
         });
         if (node.apps.length > 5) {
-          svg += `<text x="26" y="${ay+3}" font-size="8" fill="white" opacity="0.6">+${node.apps.length-5} mas</text>`;
+          svg += `<text x="28" y="${ay+3}" font-size="8" fill="white" opacity="0.7">+${node.apps.length-5} mas</text>`;
         }
       }
 
       // Anomaly bar
       if (node.anomalies && node.anomalies.length) {
-        svg += `<rect x="8" y="${nh-24}" width="${nw-16}" height="18" rx="5" fill="rgba(251,191,36,0.25)"/>`;
-        svg += `<text x="${nw/2}" y="${nh-12}" text-anchor="middle" font-size="8" font-weight="700" fill="#fde68a" letter-spacing="0.5">ANOMALIA</text>`;
+        svg += `<rect x="8" y="${nh-26}" width="${nw-16}" height="18" rx="5" fill="#fbbf24"/>`;
+        svg += `<text x="${nw/2}" y="${nh-14}" text-anchor="middle" font-size="8" font-weight="800" fill="#7c2d12" letter-spacing="0.5">ANOMALIA</text>`;
       }
 
       // Status dot
-      svg += `<circle cx="${nw-14}" cy="14" r="9" data-glow-node="${node.id}" fill="white" opacity="0.15"/>`;
-      svg += `<circle cx="${nw-14}" cy="14" r="5.5" class="topology-status-dot" data-status-node="${node.id}" fill="#9ca3af"/>`;
+      svg += `<circle cx="${nw-14}" cy="14" r="9" data-glow-node="${node.id}" fill="white" opacity="0.2"/>`;
+      svg += `<circle cx="${nw-14}" cy="14" r="6" class="topology-status-dot" data-status-node="${node.id}" fill="#9ca3af"/>`;
 
       // Mini metric
       svg += `<text x="${nw/2}" y="${nh-4}" class="topology-mini-metric" data-metric-node="${node.id}" text-anchor="middle" font-size="11" font-weight="700" fill="white"></text>`;
     }
 
     if (node.type === 'database') {
-      svg += `<text x="${nw/2}" y="52" text-anchor="middle" font-size="14" font-weight="700" fill="white">${node.label}</text>`;
-      // Host (truncated)
-      const hShort = node.host ? (node.host.length > 26 ? node.host.substring(0,24)+'..' : node.host) : '';
-      svg += `<text x="${nw/2}" y="66" text-anchor="middle" font-size="8" fill="white" opacity="0.7" font-family="'JetBrains Mono',monospace">${hShort}</text>`;
+      // Name right of icon
+      svg += `<text x="38" y="18" font-size="14" font-weight="700" fill="white">${node.label}</text>`;
+      // Host
+      const hShort = node.host ? (node.host.length > 24 ? node.host.substring(0,22)+'..' : node.host) : '';
+      svg += `<text x="38" y="30" font-size="8" fill="white" opacity="0.8" font-family="'JetBrains Mono',monospace">${hShort}</text>`;
       // Env badge
       if (node.env) {
-        svg += `<rect x="${nw/2-34}" y="72" width="68" height="16" rx="4" fill="#34d399"/>`;
-        svg += `<text x="${nw/2}" y="84" text-anchor="middle" font-size="8.5" font-weight="800" fill="#064e3b">${node.env.toUpperCase()}</text>`;
+        svg += `<rect x="12" y="40" width="68" height="16" rx="4" fill="#34d399"/>`;
+        svg += `<text x="46" y="51" text-anchor="middle" font-size="8.5" font-weight="800" fill="#064e3b">${node.env.toUpperCase()}</text>`;
       }
+      // Separator
+      svg += `<line x1="12" y1="62" x2="${nw-12}" y2="62" stroke="white" stroke-width="0.5" opacity="0.2"/>`;
       // Datasources
       if (node.datasources && node.datasources.length) {
-        let dy = 100;
+        let dy = 78;
         node.datasources.forEach(ds => {
-          svg += `<text x="14" y="${dy}" font-size="8" fill="white" opacity="0.85">${ds.name}</text>`;
-          svg += `<text x="${nw-14}" y="${dy}" text-anchor="end" font-size="7.5" fill="white" opacity="0.6">pool ${ds.pool}</text>`;
-          dy += 13;
+          svg += `<text x="14" y="${dy}" font-size="8.5" fill="white">${ds.name}</text>`;
+          svg += `<text x="${nw-14}" y="${dy}" text-anchor="end" font-size="8" fill="white" opacity="0.7">pool ${ds.pool}</text>`;
+          dy += 14;
         });
       }
       // QA note
       if (node.qaNote) {
-        svg += `<rect x="8" y="${nh-24}" width="${nw-16}" height="18" rx="5" fill="rgba(251,191,36,0.25)"/>`;
-        svg += `<text x="${nw/2}" y="${nh-12}" text-anchor="middle" font-size="7.5" font-weight="600" fill="#fde68a">${node.qaNote}</text>`;
+        svg += `<rect x="8" y="${nh-26}" width="${nw-16}" height="18" rx="5" fill="#fbbf24"/>`;
+        svg += `<text x="${nw/2}" y="${nh-14}" text-anchor="middle" font-size="7.5" font-weight="700" fill="#7c2d12">${node.qaNote}</text>`;
       }
       // Status
-      svg += `<circle cx="${nw-14}" cy="14" r="9" data-glow-node="${node.id}" fill="white" opacity="0.15"/>`;
-      svg += `<circle cx="${nw-14}" cy="14" r="5.5" class="topology-status-dot" data-status-node="${node.id}" fill="#9ca3af"/>`;
+      svg += `<circle cx="${nw-14}" cy="14" r="9" data-glow-node="${node.id}" fill="white" opacity="0.2"/>`;
+      svg += `<circle cx="${nw-14}" cy="14" r="6" class="topology-status-dot" data-status-node="${node.id}" fill="#9ca3af"/>`;
       svg += `<text x="${nw/2}" y="${nh-4}" class="topology-mini-metric" data-metric-node="${node.id}" text-anchor="middle" font-size="11" font-weight="700" fill="white"></text>`;
     }
 
     if (node.type === 'storage') {
-      svg += `<text x="${nw/2}" y="52" text-anchor="middle" font-size="13" font-weight="700" fill="white">${node.label}</text>`;
+      // Name right of icon
+      svg += `<text x="38" y="24" font-size="13" font-weight="700" fill="white">${node.label}</text>`;
       if (node.host) {
-        svg += `<text x="${nw/2}" y="68" text-anchor="middle" font-size="9.5" fill="white" opacity="0.85">${node.host}</text>`;
+        svg += `<text x="${nw/2}" y="54" text-anchor="middle" font-size="10" fill="white" opacity="0.9">${node.host}</text>`;
       }
       if (node.nfs) {
-        svg += `<text x="${nw/2}" y="82" text-anchor="middle" font-size="8.5" fill="white" opacity="0.7" font-family="'JetBrains Mono',monospace">${node.nfs}</text>`;
+        svg += `<text x="${nw/2}" y="70" text-anchor="middle" font-size="9" fill="white" opacity="0.8" font-family="'JetBrains Mono',monospace">${node.nfs}</text>`;
       }
-      svg += `<text x="${nw/2}" y="98" text-anchor="middle" font-size="8.5" fill="white" opacity="0.6">Backups automaticos</text>`;
-      svg += `<circle cx="${nw-14}" cy="14" r="9" data-glow-node="${node.id}" fill="white" opacity="0.15"/>`;
-      svg += `<circle cx="${nw-14}" cy="14" r="5.5" class="topology-status-dot" data-status-node="${node.id}" fill="#9ca3af"/>`;
+      svg += `<text x="${nw/2}" y="90" text-anchor="middle" font-size="9" fill="white" opacity="0.7">Backups automaticos</text>`;
+      svg += `<circle cx="${nw-14}" cy="14" r="9" data-glow-node="${node.id}" fill="white" opacity="0.2"/>`;
+      svg += `<circle cx="${nw-14}" cy="14" r="6" class="topology-status-dot" data-status-node="${node.id}" fill="#9ca3af"/>`;
     }
 
     svg += '</g>';
