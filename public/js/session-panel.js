@@ -51,7 +51,7 @@
   // ── Render: tabla de usuarios ──
 
   function renderUserTable(data, container) {
-    const users = Array.isArray(data) ? data : (data.users || []);
+    const users = Array.isArray(data) ? data : (data.sessions || data.users || []);
     const total = users.length;
 
     let html = `
@@ -81,7 +81,7 @@
       const fullName = [u.nombre, u.apellido].filter(Boolean).join(' ') || u.nombre_completo || '—';
       const username = u.username || u.usuario || '';
       const titulo = u.titulo || u.title || '—';
-      const loginTime = u.login_time || u.fecha_login || u.session_start;
+      const loginTime = u.loginTime || u.login_time || u.fecha_login || u.session_start;
 
       html += `
           <tr>
@@ -103,7 +103,7 @@
 
   function renderEquipmentTable(data, container) {
     const equipment = Array.isArray(data) ? data : (data.equipment || data.equipos || []);
-    const activeCount = equipment.filter(e => e.activo || e.active || e.status === 'active').length;
+    const activeCount = equipment.filter(e => e.isActive || e.activo || e.active || e.status === 'active').length;
     const total = equipment.length;
 
     let html = `
@@ -135,8 +135,8 @@
       const nombre = e.nombre_s || e.nombre || e.name || '—';
       const puerto = e.puerto || e.port || '—';
       const acciones = e.acciones || e.actions || e.action_count || 0;
-      const ultimaActividad = e.ultima_actividad || e.last_activity || e.last_action;
-      const isActive = e.activo || e.active || e.status === 'active';
+      const ultimaActividad = e.lastActivity || e.ultima_actividad || e.last_activity || e.last_action;
+      const isActive = e.isActive || e.activo || e.active || e.status === 'active';
 
       html += `
           <tr>
