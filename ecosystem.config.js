@@ -24,7 +24,7 @@ module.exports = {
       }),
       SITE_TOPOLOGY: JSON.stringify({
         entryPoints: [
-          { label: "Usuarios LAPI", type: "users", count: 120, desc: "PCs / Navegadores" },
+          { label: "Usuarios LAPI", type: "users", desc: "PCs / Navegadores" },
           { label: "Equipos Analiticos", type: "equipment", protocol: "TCP/IP", desc: "Quimica, Hemato, Inmuno" }
         ],
         database: {

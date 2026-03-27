@@ -164,7 +164,7 @@ function renderTopologyDiagram() {
     const p = positions[node.id];
     if (!p) return;
     const { w: nw, h: nh } = p;
-    const isClick = node.type === 'app';
+    const isClick = node.type === 'app' || node.type === 'entrypoint';
 
     let bgColor = fills.prod;
     if (node.type === 'entrypoint') bgColor = fills.entry;
@@ -175,7 +175,15 @@ function renderTopologyDiagram() {
 
     const icon = getNodeIcon(node.type, node.subtype);
 
-    svg += `<g class="topology-node ${isClick?'topology-node-clickable':''}" data-node-id="${node.id}" ${isClick?`onclick="setView('server-detail',{serverId:'${node.id}'})"`:''} transform="translate(${p.x},${p.y})">`;
+    // Click handler: app nodes go to server detail, entry nodes open session panel
+    let clickAttr = '';
+    if (node.type === 'app') {
+      clickAttr = `onclick="setView('server-detail',{serverId:'${node.id}'})"`;
+    } else if (node.type === 'entrypoint') {
+      clickAttr = `onclick="openSessionPanel('${node.subtype || 'users'}')"`;
+    }
+
+    svg += `<g class="topology-node ${isClick?'topology-node-clickable':''}" data-node-id="${node.id}" ${clickAttr} transform="translate(${p.x},${p.y})">`;
 
     // Card — solid fill, no filter
     svg += `<rect width="${nw}" height="${nh}" rx="12" fill="${bgColor}" class="topology-node-bg"/>`;

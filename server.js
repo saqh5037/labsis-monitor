@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const { DataFetcher } = require('./lib/fetcher');
 const { Storage } = require('./lib/storage');
-const { fetchTopQueries } = require('./lib/pg-queries');
+const { fetchTopQueries, fetchActiveSessions, fetchActiveEquipment } = require('./lib/pg-queries');
 const { getStatus } = require('./lib/thresholds');
 const { EventDetector } = require('./lib/events');
 const { listActions, getAction } = require('./lib/actions');
@@ -182,6 +182,26 @@ app.get('/api/site-info', async (req, res) => {
 app.get('/api/app-inventory', (req, res) => {
   const inventory = fetcher.getData().appInventory || {};
   res.json(inventory);
+});
+
+// API: Active LABSIS sessions (from usuario.ult_login)
+app.get('/api/sessions/users', async (req, res) => {
+  try {
+    const data = await fetchActiveSessions();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ count: 0, sessions: [], error: err.message });
+  }
+});
+
+// API: Active equipment (from equipo_sistema_log)
+app.get('/api/sessions/equipment', async (req, res) => {
+  try {
+    const data = await fetchActiveEquipment();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ count: 0, totalRegistered: 0, equipment: [], error: err.message });
+  }
 });
 
 // API: Topology — server architecture diagram data
@@ -496,10 +516,28 @@ async function fetchAndBroadcast(full = false) {
       if (anomalies.length) console.log(`[Anomaly] ${anomalies.length} anomalía(s) detectada(s)`);
     }
 
-    // Fetch session info (non-blocking, runs in parallel-ish)
-    fetcher.fetchSessionInfo().catch(e => console.error('[Sessions] Error:', e.message));
+    // Fetch real session data from PostgreSQL (replaces broken TCP counting)
+    Promise.all([
+      fetchActiveSessions().catch(e => { console.error('[Sessions] Users:', e.message); return { count: 0, sessions: [] }; }),
+      fetchActiveEquipment().catch(e => { console.error('[Sessions] Equipment:', e.message); return { count: 0, totalRegistered: 0, equipment: [] }; }),
+    ]).then(([users, equipment]) => {
+      const sessions = {
+        _totals: {
+          browsers: users.count,
+          equipment: equipment.count,
+          lastFetched: new Date().toISOString(),
+        },
+        users,
+        equipment,
+      };
+      // Store for API access
+      fetcher.getData().sessions = sessions;
+      // Broadcast session update to SSE clients
+      broadcastEvent({ type: 'sessions', data: sessions });
+      console.log(`[Sessions] users:${users.count} equipment:${equipment.count}/${equipment.totalRegistered}`);
+    });
 
-    // Include sessions in broadcast data
+    // Include current sessions in broadcast data (may be from previous cycle on first run)
     data.sessions = fetcher.getData().sessions || {};
 
     broadcast(data);

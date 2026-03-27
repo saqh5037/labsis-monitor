@@ -360,6 +360,18 @@ function connectSSE() {
         } else if (window.currentView === 'server-detail' && window.currentServerId) {
           try { updateCarDashboard(window.currentServerId, msg.data); } catch (e) {}
         }
+        // Update session panel if open
+        if (msg.data && msg.data.sessions) {
+          try { if (typeof updateSessionPanelIfOpen === 'function') updateSessionPanelIfOpen(msg.data.sessions); } catch (e) {}
+        }
+      }
+      // Handle dedicated session events
+      if (msg.type === 'sessions' && msg.data) {
+        try { if (typeof updateSessionPanelIfOpen === 'function') updateSessionPanelIfOpen(msg.data); } catch (e) {}
+        // Also update topology counts
+        if (window.currentView === 'overview') {
+          try { updateSessionNodes(msg.data); } catch (e) {}
+        }
       }
     } catch (e) {}
   };
