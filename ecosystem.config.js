@@ -24,18 +24,21 @@ module.exports = {
       }),
       SITE_TOPOLOGY: JSON.stringify({
         entryPoints: [
-          { label: "Usuarios LAPI", type: "users", count: 120 },
-          { label: "Equipos Lab", type: "equipment", protocol: "TCP/IP" }
+          { label: "Usuarios LAPI", type: "users", count: 120, desc: "PCs / Navegadores" },
+          { label: "Equipos Analiticos", type: "equipment", protocol: "TCP/IP", desc: "Quimica, Hemato, Inmuno" }
         ],
-        loadBalancer: { label: "Nginx / ALB", host: "labsis.lapi.gob.mx", status: "inactive" },
         database: {
           label: "RDS PostgreSQL",
+          env: "Produccion",
           host: "labsis-lapi-db-01.cmtbpifn3sci.us-east-2.rds.amazonaws.com",
+          port: 5432,
+          dbName: "labsis",
           datasources: [
-            { name: "labsisDatasource", pool: "10-60", jndi: "labsisDatasource" },
-            { name: "labsisResultsDatasource", pool: "10-100", jndi: "labsisResultsDatasource" },
-            { name: "jdbc/ContactsDS", pool: "10-100", jndi: "jdbc/ContactsDS" }
-          ]
+            { name: "labsisDatasource", pool: "10-60" },
+            { name: "labsisResultsDatasource", pool: "10-100" },
+            { name: "jdbc/ContactsDS", pool: "10-100" }
+          ],
+          qaNote: "QA apunta a esta misma BD para datos reales"
         },
         storage: { label: "S3 + NFS", bucket: "labsis-lapi-bucket", nfs: "/mnt/s3-labsis" }
       }),
