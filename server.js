@@ -168,6 +168,7 @@ app.get('/api/site-info', async (req, res) => {
     loadBalancer: topologyConfig.loadBalancer || null,
     storage: topologyConfig.storage || null,
     entryPoints: topologyConfig.entryPoints || [],
+    sessions: fetcher.getData().sessions || {},
     summary: {
       totalServers: servers.length,
       totalMemGB,
@@ -494,6 +495,12 @@ async function fetchAndBroadcast(full = false) {
       const anomalies = anomalyDetector.detect(data);
       if (anomalies.length) console.log(`[Anomaly] ${anomalies.length} anomalía(s) detectada(s)`);
     }
+
+    // Fetch session info (non-blocking, runs in parallel-ish)
+    fetcher.fetchSessionInfo().catch(e => console.error('[Sessions] Error:', e.message));
+
+    // Include sessions in broadcast data
+    data.sessions = fetcher.getData().sessions || {};
 
     broadcast(data);
     const serverCounts = CONFIGURED_SERVERS.map(id => `${id}:${(data[id] || []).length}`).join(' ');
