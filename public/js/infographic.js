@@ -120,12 +120,12 @@ function renderServerCard(srv) {
 
   detailsHtml += '</div>'; // srv-details-grid
 
-  // Servicios
+  // Servicios detectados por systemctl
   if (srv.services && srv.services !== 'N/A' && srv.services.trim()) {
     const serviceList = srv.services.split('\n').filter(s => s.trim());
     if (serviceList.length) {
       detailsHtml += '<div class="srv-services">';
-      detailsHtml += '<div class="srv-detail-heading">Servicios Activos</div>';
+      detailsHtml += '<div class="srv-detail-heading">Servicios Activos (systemctl)</div>';
       detailsHtml += '<div class="srv-services-list">';
       serviceList.forEach(s => {
         detailsHtml += `<span class="srv-service-chip"><span class="srv-service-dot"></span>${s.replace('.service', '')}</span>`;
@@ -134,11 +134,83 @@ function renderServerCard(srv) {
     }
   }
 
+  // Application Inventory (from config + live discovery)
+  const apps = srv.liveApps || srv.apps || [];
+  if (apps.length) {
+    detailsHtml += '<div class="srv-apps-section">';
+    detailsHtml += '<div class="srv-detail-heading">Aplicaciones</div>';
+    detailsHtml += '<div class="srv-apps-grid">';
+    apps.forEach(app => {
+      const statusClass = `app-status-${app.status || 'unknown'}`;
+      const statusLabel = app.status === 'active' ? 'Activo' :
+                          app.status === 'prepared' ? 'Preparado' :
+                          app.status === 'anomaly' ? 'Anomalia' :
+                          app.status === 'stopped' ? 'Detenido' : app.status || 'N/A';
+      detailsHtml += `<div class="srv-app-card ${statusClass}">
+        <div class="srv-app-header">
+          <span class="srv-app-name">${app.name}</span>
+          <span class="srv-app-status-dot ${statusClass}"></span>
+        </div>
+        <div class="srv-app-meta">
+          ${app.port ? `<span>Puerto: ${app.port}</span>` : ''}
+          ${app.heap ? `<span>Heap: ${app.heap}</span>` : ''}
+          ${app.java ? `<span>${app.java}</span>` : ''}
+          ${app.pid ? `<span>PID ${app.pid}</span>` : ''}
+          ${app.mount ? `<span>${app.mount}</span>` : ''}
+        </div>
+        ${app.note ? `<div class="srv-app-note">${app.note}</div>` : ''}
+      </div>`;
+    });
+    detailsHtml += '</div></div>';
+  }
+
+  // Nginx routing
+  if (srv.nginx) {
+    detailsHtml += '<div class="srv-nginx-section">';
+    detailsHtml += '<div class="srv-detail-heading">Nginx Routing</div>';
+    if (srv.nginx.domain) {
+      detailsHtml += `<div class="srv-nginx-domain">${srv.nginx.domain} ${srv.nginx.ssl ? '(SSL)' : ''}</div>`;
+    }
+    if (srv.nginx.routes) {
+      detailsHtml += '<div class="srv-nginx-routes">';
+      Object.entries(srv.nginx.routes).forEach(([path, target]) => {
+        detailsHtml += `<div class="srv-nginx-route"><code>${path}</code> &rarr; <code>${target}</code></div>`;
+      });
+      detailsHtml += '</div>';
+    }
+    detailsHtml += '</div>';
+  }
+
+  // Cron jobs
+  if (srv.crons && srv.crons.length) {
+    detailsHtml += '<div class="srv-crons-section">';
+    detailsHtml += '<div class="srv-detail-heading">Tareas Cron</div>';
+    srv.crons.forEach(c => {
+      detailsHtml += `<div class="srv-cron-item"><span class="srv-cron-name">${c.name}</span><span class="srv-cron-schedule">${c.schedule}</span></div>`;
+    });
+    detailsHtml += '</div>';
+  }
+
+  // Anomalies
+  if (srv.anomalies && srv.anomalies.length) {
+    detailsHtml += '<div class="srv-anomalies">';
+    srv.anomalies.forEach(a => {
+      detailsHtml += `<div class="srv-anomaly-banner">${a}</div>`;
+    });
+    detailsHtml += '</div>';
+  }
+
+  // Role badge
+  const roleLabels = { production: 'Produccion', qa: 'Testing / QA', spare: 'Disponible' };
+  const roleClass = `role-badge role-${srv.role || 'production'}`;
+  const roleLabel = roleLabels[srv.role] || srv.role || 'Produccion';
+
   return `<details class="infographic-details server-card">
     <summary class="server-card-header">
       <div class="server-card-info">
         <span class="server-card-name">${srv.name}</span>
         <span class="ip-badge">${srv.ip || srv.host || ''}</span>
+        <span class="${roleClass}">${roleLabel}</span>
       </div>
       <div class="server-card-meta">
         <span class="server-card-spec">${srv.memGB} GB RAM</span>

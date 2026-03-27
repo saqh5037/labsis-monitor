@@ -2567,3 +2567,325 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
   transition: opacity 0.15s ease;
   display: inline;
 }
+
+/* ═══════════════════════════════════════════════ */
+/* ═══ Infrastructure Panel (v2) ═══ */
+/* ═══════════════════════════════════════════════ */
+
+/* Load Balancer Banner */
+.infra-lb-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.infra-lb-banner.lb-inactive {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--red);
+}
+.infra-lb-banner.lb-active {
+  background: rgba(5, 150, 105, 0.08);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+  color: var(--green);
+}
+.infra-lb-icon { display: flex; flex-shrink: 0; }
+.infra-lb-info { flex: 1; }
+.infra-lb-title { font-weight: 600; font-size: 13px; }
+.infra-lb-host { font-size: 11px; opacity: 0.7; font-family: 'JetBrains Mono', monospace; }
+.infra-lb-status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  background: currentColor;
+  color: white;
+}
+.lb-inactive .infra-lb-status-badge { background: var(--red); color: white; }
+.lb-active .infra-lb-status-badge { background: var(--green); color: white; }
+
+/* Services Matrix */
+.infra-services-matrix {
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+.infra-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.infra-matrix-table th {
+  text-align: center;
+  padding: 8px 10px;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+}
+.infra-matrix-table th:first-child { text-align: left; }
+.infra-matrix-table td {
+  text-align: center;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.03);
+  vertical-align: middle;
+}
+.infra-matrix-table td:first-child { text-align: left; }
+.svc-name-cell {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+}
+.matrix-server-name { display: block; font-size: 12px; }
+.matrix-port { font-size: 10px; color: var(--text3); margin-left: 4px; }
+
+/* Status dots */
+.dot-green, .dot-yellow, .dot-blue, .dot-grey, .dot-none {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.dot-green { background: var(--green); box-shadow: 0 0 6px rgba(5, 150, 105, 0.4); }
+.dot-yellow { background: var(--yellow); box-shadow: 0 0 6px rgba(217, 119, 6, 0.4); }
+.dot-blue { background: #60a5fa; box-shadow: 0 0 6px rgba(96, 165, 250, 0.4); }
+.dot-grey { background: #9ca3af; }
+.dot-none { background: none; width: auto; height: auto; font-size: 11px; color: var(--text3); }
+
+/* Role badges */
+.role-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+.role-badge-sm {
+  display: inline-block;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-top: 2px;
+}
+.role-production, .role-prod { background: rgba(5,150,105,0.12); color: var(--green); }
+.role-qa { background: rgba(245,158,11,0.12); color: var(--yellow); }
+.role-spare { background: rgba(107,114,128,0.12); color: #6b7280; }
+
+/* Database Panel */
+.infra-db-panel { padding: 12px 0; }
+.infra-db-host {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text2);
+  margin-bottom: 10px;
+  word-break: break-all;
+}
+.infra-db-label { font-weight: 600; color: var(--text); }
+.infra-ds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+.infra-ds-card {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.infra-ds-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.infra-ds-pool { font-size: 11px; color: var(--text2); }
+.infra-ds-jndi { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+/* Cron Jobs Panel */
+.infra-crons-panel { padding: 8px 0; }
+.infra-cron-server { font-size: 12px; font-weight: 600; color: var(--text); margin: 8px 0 4px; }
+.infra-cron-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 12px;
+}
+.infra-cron-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text2);
+}
+.infra-cron-schedule { font-size: 11px; color: var(--text3); }
+
+/* Anomalies */
+.infra-anomalies {
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-top: 12px;
+}
+.infra-anomalies-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--yellow);
+  margin-bottom: 8px;
+}
+.infra-anomaly-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 0;
+}
+.infra-anomaly-server {
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--text);
+  background: rgba(245,158,11,0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.infra-anomaly-msg { color: var(--text2); }
+
+/* ═══ Server Card Enhancements ═══ */
+
+/* App inventory grid */
+.srv-apps-section { margin-top: 12px; }
+.srv-apps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+.srv-app-card {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--text3);
+}
+.srv-app-card.app-status-active { border-left-color: var(--green); }
+.srv-app-card.app-status-prepared { border-left-color: #60a5fa; }
+.srv-app-card.app-status-anomaly { border-left-color: var(--yellow); }
+.srv-app-card.app-status-stopped { border-left-color: var(--red); }
+
+.srv-app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.srv-app-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+.srv-app-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.srv-app-status-dot.app-status-active { background: var(--green); }
+.srv-app-status-dot.app-status-prepared { background: #60a5fa; }
+.srv-app-status-dot.app-status-anomaly { background: var(--yellow); }
+.srv-app-status-dot.app-status-stopped { background: var(--red); }
+.srv-app-status-dot.app-status-unknown { background: var(--text3); }
+
+.srv-app-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text3);
+}
+.srv-app-note {
+  font-size: 10px;
+  color: var(--yellow);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* Nginx routing */
+.srv-nginx-section { margin-top: 12px; }
+.srv-nginx-domain {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+.srv-nginx-routes { margin-top: 4px; }
+.srv-nginx-route {
+  font-size: 11px;
+  color: var(--text2);
+  padding: 2px 0;
+}
+.srv-nginx-route code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  background: var(--bg-code);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* Crons in server card */
+.srv-crons-section { margin-top: 12px; }
+.srv-cron-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  padding: 3px 0;
+}
+.srv-cron-name {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text2);
+}
+.srv-cron-schedule { color: var(--text3); font-size: 10px; }
+
+/* Anomaly banner in server card */
+.srv-anomalies { margin-top: 10px; }
+.srv-anomaly-banner {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--yellow);
+}
+
+/* ═══ Dark mode overrides ═══ */
+[data-theme="dark"] .infra-lb-banner.lb-inactive {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+[data-theme="dark"] .infra-lb-banner.lb-active {
+  background: rgba(5, 150, 105, 0.12);
+  border-color: rgba(5, 150, 105, 0.3);
+}
+[data-theme="dark"] .infra-matrix-table th { color: var(--text3); }
+[data-theme="dark"] .infra-matrix-table td { border-bottom-color: rgba(255,255,255,0.04); }
+[data-theme="dark"] .svc-name-cell { color: var(--text2); }
+[data-theme="dark"] .srv-app-card { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .infra-ds-card { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .infra-anomalies { background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.25); }
+[data-theme="dark"] .srv-anomaly-banner { background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.25); }
+[data-theme="dark"] .srv-nginx-route code { background: rgba(255,255,255,0.05); }

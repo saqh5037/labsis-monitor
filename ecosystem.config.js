@@ -23,9 +23,21 @@ module.exports = {
         contractType: "Soporte Premium"
       }),
       SITE_TOPOLOGY: JSON.stringify({
-        loadBalancer: { label: "Nginx / ALB", host: "labsis.lapi.gob.mx" },
-        database: { label: "RDS PostgreSQL", host: "rds.us-east-2.amazonaws.com" },
-        storage: { label: "S3 Backups", bucket: "labsis-backup-lapi" }
+        entryPoints: [
+          { label: "Usuarios LAPI", type: "users", count: 120 },
+          { label: "Equipos Lab", type: "equipment", protocol: "TCP/IP" }
+        ],
+        loadBalancer: { label: "Nginx / ALB", host: "labsis.lapi.gob.mx", status: "inactive" },
+        database: {
+          label: "RDS PostgreSQL",
+          host: "labsis-lapi-db-01.cmtbpifn3sci.us-east-2.rds.amazonaws.com",
+          datasources: [
+            { name: "labsisDatasource", pool: "10-60", jndi: "labsisDatasource" },
+            { name: "labsisResultsDatasource", pool: "10-100", jndi: "labsisResultsDatasource" },
+            { name: "jdbc/ContactsDS", pool: "10-100", jndi: "jdbc/ContactsDS" }
+          ]
+        },
+        storage: { label: "S3 + NFS", bucket: "labsis-lapi-bucket", nfs: "/mnt/s3-labsis" }
       }),
       MONITOR_SERVERS: JSON.stringify({
         el18: {
@@ -36,7 +48,17 @@ module.exports = {
           memGB: 32,
           heapGB: 12,
           appPort: 8080,
-          labsisCSV: "/tmp/labsis-monitor-ip-172-32-2-250.csv"
+          sshUser: "dynamtek",
+          role: "production",
+          labsisCSV: "/tmp/labsis-monitor-ip-172-32-2-250.csv",
+          apps: [
+            { name: "JBoss 4.2.3", type: "jboss", port: 8080, heap: "12G", status: "active" },
+            { name: "Nginx 1.18", type: "nginx", port: 80, status: "active" },
+            { name: "PM2 6.0", type: "pm2", port: 3090, status: "active" },
+            { name: "s3fs", type: "storage", mount: "/mnt/s3-labsis", status: "active" },
+            { name: "NFS Server", type: "nfs", port: 2049, status: "active" },
+            { name: "lapi-dashboard", type: "node", port: 3090, status: "active" }
+          ]
         },
         el316: {
           host: "3.135.64.52",
@@ -46,12 +68,66 @@ module.exports = {
           memGB: 64,
           heapGB: 24,
           appPort: 8080,
+          sshUser: "dynamtek",
+          role: "production",
           labsisCSV: "/tmp/labsis-monitor-ip-172-32-2-166.csv",
           rdsCSV: "/tmp/rds-metrics.csv",
           slowLog: "/tmp/rds-slow-queries.log",
           locksLog: "/tmp/rds-locks.log",
           idleTxLog: "/tmp/rds-idle-in-tx.log",
-          backupPath: "/home/dynamtek/labsis-backup"
+          backupPath: "/home/dynamtek/labsis-backup",
+          apps: [
+            { name: "JBoss 4.2.3", type: "jboss", port: 8080, heap: "24G", status: "active" },
+            { name: "Nginx 1.18", type: "nginx", port: 80, status: "active" },
+            { name: "s3fs", type: "storage", mount: "/mnt/s3-labsis", status: "active" },
+            { name: "NFS Server", type: "nfs", port: 2049, status: "active" }
+          ],
+          crons: [
+            { name: "autodescartarGradillas", schedule: "Cada 12 horas" },
+            { name: "dashboard_validacion", schedule: "Cada 20 minutos" }
+          ]
+        },
+        qa: {
+          host: "18.224.25.245",
+          name: "QA",
+          ip: "18.224.25.245",
+          diskGB: 16,
+          memGB: 8,
+          heapGB: 2,
+          appPort: 8081,
+          sshUser: "dynamtek",
+          role: "qa",
+          labsisCSV: "/tmp/labsis-monitor-qa.csv",
+          apps: [
+            { name: "labsis3 (Spring Boot)", type: "springboot", port: 8081, heap: "1G", java: "Corretto 24", status: "active" },
+            { name: "Kafka 3.9.0", type: "kafka", port: 9092, heap: "1G", status: "active" },
+            { name: "JBoss 4.2.3", type: "jboss", port: 8080, heap: "2G", status: "prepared" },
+            { name: "Nginx", type: "nginx", port: 80, domain: "labsis3-qa.labsis.com", status: "active" },
+            { name: "s3fs", type: "storage", mount: "/mnt/s3-labsis", status: "active" },
+            { name: "NFS Server", type: "nfs", port: 2049, status: "active" }
+          ],
+          nginx: {
+            domain: "labsis3-qa.labsis.com",
+            ssl: true,
+            routes: { "/api/*": "localhost:8081", "/graphql": "localhost:8081", "/actuator/*": "localhost:8081" }
+          }
+        },
+        srv4: {
+          host: "18.188.208.144",
+          name: "4to Server",
+          ip: "18.188.208.144",
+          diskGB: 16,
+          memGB: 4,
+          heapGB: 2,
+          appPort: 8080,
+          sshUser: "ubuntu",
+          role: "spare",
+          labsisCSV: "/tmp/labsis-monitor-srv4.csv",
+          apps: [
+            { name: "JBoss 4.2.3", type: "jboss", port: 8080, heap: "2G", status: "anomaly", note: "Running WITHOUT EAR" },
+            { name: "s3fs", type: "storage", mount: "/mnt/s3-labsis", status: "active" }
+          ],
+          anomalies: ["JBoss ejecutandose SIN EAR deployment"]
         }
       }),
       PATH: "/home/dynamtek/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"

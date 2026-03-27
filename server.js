@@ -123,14 +123,19 @@ app.get('/api/site-config', (req, res) => {
       memGB: s.memGB || 32,
       heapGB: s.heapGB || 12,
       appPort: s.appPort || 8080,
+      role: s.role || 'production',
+      apps: s.apps || [],
+      anomalies: s.anomalies || [],
     })),
   });
 });
 
-// API: Site info (extended) — server OS, Java, PG versions + client profile
+// API: Site info (extended) — server OS, Java, PG versions + client profile + infra
 app.get('/api/site-info', async (req, res) => {
   const clientInfo = process.env.CLIENT_INFO ? JSON.parse(process.env.CLIENT_INFO) : null;
   const serverInfo = fetcher.getData().serverInfo || {};
+  const appInventory = fetcher.getData().appInventory || {};
+  const topologyConfig = process.env.SITE_TOPOLOGY ? JSON.parse(process.env.SITE_TOPOLOGY) : {};
 
   const servers = Object.entries(SERVERS_CONFIG).map(([id, s]) => ({
     id,
@@ -140,23 +145,42 @@ app.get('/api/site-info', async (req, res) => {
     memGB: s.memGB || 32,
     heapGB: s.heapGB || 12,
     appPort: s.appPort || 8080,
+    role: s.role || 'production',
+    apps: s.apps || [],
+    anomalies: s.anomalies || [],
+    crons: s.crons || [],
+    nginx: s.nginx || null,
     ...(serverInfo[id] || {}),
+    liveApps: appInventory[id]?.apps || null,
+    liveCrontab: appInventory[id]?.crontab || null,
+    livePorts: appInventory[id]?.ports || null,
   }));
 
-  // Calcular summary
   const totalMemGB = servers.reduce((sum, s) => sum + (s.memGB || 0), 0);
   const totalDiskGB = servers.reduce((sum, s) => sum + (s.diskGB || 0), 0);
+  const totalHeapGB = servers.reduce((sum, s) => sum + (s.heapGB || 0), 0);
 
   res.json({
     client: clientInfo,
     siteName: process.env.SITE_NAME || 'LABSIS',
     servers,
+    database: topologyConfig.database || null,
+    loadBalancer: topologyConfig.loadBalancer || null,
+    storage: topologyConfig.storage || null,
+    entryPoints: topologyConfig.entryPoints || [],
     summary: {
       totalServers: servers.length,
       totalMemGB,
       totalDiskGB,
+      totalHeapGB,
     },
   });
+});
+
+// API: App inventory (live discovery via SSH)
+app.get('/api/app-inventory', (req, res) => {
+  const inventory = fetcher.getData().appInventory || {};
+  res.json(inventory);
 });
 
 // API: Topology — server architecture diagram data
@@ -620,8 +644,19 @@ app.listen(PORT, BIND_HOST, async () => {
     console.log('[Init] Server info recolectada.');
   }).catch(e => console.error('[Init] Error server info:', e.message));
 
-  // Refresh server info cada 5 minutos
+  // Fetch app inventory (live discovery) — background
+  fetcher.fetchAllAppInventory().then(() => {
+    console.log('[Init] App inventory recolectado.');
+  }).catch(e => console.error('[Init] Error app inventory:', e.message));
+
+  // Refresh server info + app inventory cada 5 minutos
   setInterval(() => fetcher.fetchAllServerInfo().catch(e => console.error('[ServerInfo] Error:', e.message)), 300000);
+  setInterval(() => {
+    fetcher.fetchAllAppInventory().then(inv => {
+      // Broadcast app inventory update via SSE
+      broadcastEvent({ type: 'app-inventory', data: inv });
+    }).catch(e => console.error('[AppInventory] Error:', e.message));
+  }, 300000);
 
   fetchQueries();
   fetchBackupStatus();

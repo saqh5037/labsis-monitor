@@ -17,8 +17,8 @@ module.exports = {
       PG_SSL: "false",
       SITE_NAME: "Chontalpa QA",
       CLIENT_INFO: JSON.stringify({
-        name: "Hospital General de Chontalpa",
-        shortName: "Chontalpa",
+        name: "Laboratorio Chontalpa — QA",
+        shortName: "Chontalpa QA",
         location: "Tabasco",
         usersCount: 250,
         samplesPerDay: 1200,

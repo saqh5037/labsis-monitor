@@ -1,4 +1,4 @@
-// topology.js — Interactive SVG architecture diagram
+// topology.js — Interactive SVG architecture diagram (v2 — 5 columns, enriched nodes)
 
 let topologyData = null;
 let topologyLiveData = null;
@@ -19,45 +19,64 @@ function renderTopologyDiagram() {
 
   const { nodes, edges } = topologyData;
   if (!nodes.length) {
-    container.innerHTML = '<div class="no-data">Sin datos de topología</div>';
+    container.innerHTML = '<div class="no-data">Sin datos de topologia</div>';
     return;
   }
 
   // Layout: group by column
   const columns = {};
   nodes.forEach(n => {
-    const col = n.col ?? 1;
+    const col = n.col ?? 2;
     if (!columns[col]) columns[col] = [];
     columns[col].push(n);
   });
 
   const colKeys = Object.keys(columns).sort((a, b) => a - b);
   const numCols = colKeys.length;
-  const maxPerCol = Math.max(...Object.values(columns).map(c => c.length));
 
-  // SVG dimensions
-  const colWidth = 250;
-  const rowHeight = 130;
-  const padding = 30;
+  // Dynamic node heights — app nodes with apps need more height
+  const baseNodeH = 90;
+  const appNodeH = 160; // taller for app chips
+  const nodeW = 190;
+
+  // Calculate max height per column considering variable node heights
+  let maxColH = 0;
+  colKeys.forEach(col => {
+    const nodesInCol = columns[col];
+    let colH = 0;
+    nodesInCol.forEach(n => {
+      colH += (n.type === 'app' ? appNodeH : baseNodeH) + 20; // 20px gap
+    });
+    maxColH = Math.max(maxColH, colH);
+  });
+
+  const colWidth = 260;
+  const padding = 40;
   const svgWidth = numCols * colWidth + padding * 2;
-  const svgHeight = maxPerCol * rowHeight + padding * 2;
-  const nodeW = 180;
-  const nodeH = 90;
+  const svgHeight = Math.max(maxColH + padding * 2 + 30, 500);
 
-  // Assign positions
+  // Assign positions with variable heights
   const positions = {};
   colKeys.forEach((col, ci) => {
     const nodesInCol = columns[col];
     const colX = padding + ci * colWidth + (colWidth - nodeW) / 2;
-    nodesInCol.forEach((node, ri) => {
-      const totalH = nodesInCol.length * rowHeight;
-      const startY = padding + (svgHeight - padding * 2 - totalH) / 2;
+
+    // Calculate total height for this column
+    let totalH = 0;
+    nodesInCol.forEach(n => { totalH += (n.type === 'app' ? appNodeH : baseNodeH) + 20; });
+    totalH -= 20; // remove last gap
+
+    let currentY = padding + 20 + (svgHeight - padding * 2 - 20 - totalH) / 2;
+    nodesInCol.forEach(node => {
+      const nh = node.type === 'app' ? appNodeH : baseNodeH;
       positions[node.id] = {
         x: colX,
-        y: startY + ri * rowHeight + (rowHeight - nodeH) / 2,
+        y: currentY,
         cx: colX + nodeW / 2,
-        cy: startY + ri * rowHeight + (rowHeight - nodeH) / 2 + nodeH / 2,
+        cy: currentY + nh / 2,
+        h: nh,
       };
+      currentY += nh + 20;
     });
   });
 
@@ -75,8 +94,17 @@ function renderTopologyDiagram() {
     <linearGradient id="grad-loadbalancer" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#6d28d9"/>
     </linearGradient>
+    <linearGradient id="grad-inactive" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6b7280"/><stop offset="100%" stop-color="#4b5563"/>
+    </linearGradient>
     <linearGradient id="grad-app" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="grad-app-qa" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="grad-app-spare" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6b7280"/><stop offset="100%" stop-color="#4b5563"/>
     </linearGradient>
     <linearGradient id="grad-database" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#059669"/><stop offset="100%" stop-color="#047857"/>
@@ -84,24 +112,28 @@ function renderTopologyDiagram() {
     <linearGradient id="grad-storage" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#0891b2"/>
     </linearGradient>
+    <linearGradient id="grad-entrypoint" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/><stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
   </defs>`;
 
-  // Zone backgrounds (per column, before edges)
+  // Zone backgrounds
   const zoneColors = {
-    0: { fill: 'rgba(139,92,246,0.04)', label: 'ENTRADA' },
-    1: { fill: 'rgba(59,130,246,0.04)', label: 'APLICACION' },
-    2: { fill: 'rgba(5,150,105,0.04)', label: 'BASE DE DATOS' },
-    3: { fill: 'rgba(6,182,212,0.04)', label: 'ALMACENAMIENTO' },
+    0: { fill: 'rgba(245,158,11,0.04)', label: 'USUARIOS / EQUIPOS' },
+    1: { fill: 'rgba(139,92,246,0.04)', label: 'BALANCEADOR' },
+    2: { fill: 'rgba(59,130,246,0.04)', label: 'SERVIDORES' },
+    3: { fill: 'rgba(5,150,105,0.04)', label: 'BASE DE DATOS' },
+    4: { fill: 'rgba(6,182,212,0.04)', label: 'ALMACENAMIENTO' },
   };
 
   colKeys.forEach((col, ci) => {
-    const zone = zoneColors[ci] || zoneColors[1];
+    const zone = zoneColors[parseInt(col)] || zoneColors[2];
     const zx = padding / 2 + ci * colWidth;
     svg += `<rect x="${zx}" y="${padding / 2}" width="${colWidth}" height="${svgHeight - padding}" rx="8" class="topology-zone" fill="${zone.fill}"/>`;
     svg += `<text x="${zx + colWidth / 2}" y="${padding - 4}" class="topology-zone-label" text-anchor="middle" font-size="9" font-weight="600" letter-spacing="1">${zone.label}</text>`;
   });
 
-  // Edges (glow behind + normal on top)
+  // Edges
   edges.forEach(edge => {
     const from = positions[edge.from];
     const to = positions[edge.to];
@@ -114,13 +146,19 @@ function renderTopologyDiagram() {
     const dx = x2 - x1;
     const cpOffset = Math.max(30, Math.abs(dx) * 0.4);
 
-    // Glow edge (behind)
-    svg += `<path d="M ${x1} ${y1} C ${x1 + cpOffset} ${y1}, ${x2 - cpOffset} ${y2}, ${x2} ${y2}"
-      class="topology-edge-glow" fill="none" stroke="var(--primary)" stroke-width="6" opacity="0.12" stroke-linecap="round"/>`;
+    const isInactive = edge.style === 'inactive';
+    const isBypass = edge.style === 'bypass';
+    const isSecondary = edge.style === 'secondary';
+    const dashAttr = (isInactive || isSecondary) ? 'stroke-dasharray="6 4"' : '';
+    const opacity = isInactive ? '0.3' : isBypass ? '0.5' : isSecondary ? '0.3' : '0.12';
 
-    // Normal edge (on top)
+    // Glow edge
     svg += `<path d="M ${x1} ${y1} C ${x1 + cpOffset} ${y1}, ${x2 - cpOffset} ${y2}, ${x2} ${y2}"
-      class="topology-edge" marker-end="url(#arrow)"
+      class="topology-edge-glow" fill="none" stroke="var(--primary)" stroke-width="6" opacity="${opacity}" stroke-linecap="round" ${dashAttr}/>`;
+
+    // Normal edge
+    svg += `<path d="M ${x1} ${y1} C ${x1 + cpOffset} ${y1}, ${x2 - cpOffset} ${y2}, ${x2} ${y2}"
+      class="topology-edge" marker-end="url(#arrow)" ${dashAttr}
       data-from="${edge.from}" data-to="${edge.to}"/>`;
   });
 
@@ -129,41 +167,116 @@ function renderTopologyDiagram() {
     const pos = positions[node.id];
     if (!pos) return;
 
-    const icon = getNodeIcon(node.type);
+    const nh = pos.h;
     const isClickable = node.type === 'app';
+    const isInactiveLB = node.type === 'loadbalancer' && node.status === 'inactive';
+
+    // Determine gradient
+    let grad = `url(#grad-${node.type})`;
+    if (isInactiveLB) grad = 'url(#grad-inactive)';
+    else if (node.type === 'app' && node.role === 'qa') grad = 'url(#grad-app-qa)';
+    else if (node.type === 'app' && node.role === 'spare') grad = 'url(#grad-app-spare)';
+
+    const icon = getNodeIcon(node.type, node.subtype);
 
     svg += `<g class="topology-node ${isClickable ? 'topology-node-clickable' : ''}"
       data-node-id="${node.id}"
       ${isClickable ? `onclick="setView('server-detail', {serverId:'${node.id}'})"` : ''}
       transform="translate(${pos.x}, ${pos.y})">`;
 
-    // Card background with gradient
-    svg += `<rect width="${nodeW}" height="${nodeH}" rx="12" fill="url(#grad-${node.type})" filter="url(#topo-shadow)" class="topology-node-bg"/>`;
+    // Card background
+    svg += `<rect width="${nodeW}" height="${nh}" rx="12" fill="${grad}" filter="url(#topo-shadow)" class="topology-node-bg"/>`;
 
     // Icon
-    svg += `<g transform="translate(12, ${nodeH / 2 - 10})">${icon}</g>`;
+    svg += `<g transform="translate(12, 14)">${icon}</g>`;
 
-    // Labels (adjusted Y for taller nodeH)
-    svg += `<text x="${nodeW / 2 + 8}" y="32" class="topology-node-label">${node.label}</text>`;
+    // Label
+    svg += `<text x="${nodeW / 2 + 8}" y="28" class="topology-node-label">${node.label}</text>`;
+
+    // Host/IP
     if (node.host) {
-      svg += `<text x="${nodeW / 2 + 8}" y="50" class="topology-node-ip">${node.host}</text>`;
+      const hostDisplay = node.host.length > 24 ? node.host.substring(0, 22) + '..' : node.host;
+      svg += `<text x="${nodeW / 2 + 8}" y="44" class="topology-node-ip">${hostDisplay}</text>`;
     }
 
-    // Glow ring (behind status dot)
-    svg += `<circle cx="${nodeW - 14}" cy="14" r="10" class="topology-status-glow" data-glow-node="${node.id}" fill="var(--text3)" opacity="0.15"/>`;
+    // Role badge (for app nodes)
+    if (node.type === 'app' && node.role) {
+      const roleLabels = { production: 'PROD', qa: 'QA', spare: 'SPARE' };
+      const roleColors = { production: '#10b981', qa: '#f59e0b', spare: '#6b7280' };
+      const rl = roleLabels[node.role] || node.role.toUpperCase();
+      const rc = roleColors[node.role] || '#6b7280';
+      svg += `<rect x="${nodeW - 50}" y="36" width="38" height="14" rx="3" fill="${rc}" opacity="0.9"/>`;
+      svg += `<text x="${nodeW - 31}" y="46" text-anchor="middle" font-size="7" font-weight="700" fill="white" letter-spacing="0.5">${rl}</text>`;
+    }
 
-    // Status dot (top-right)
-    svg += `<circle cx="${nodeW - 14}" cy="14" r="6" class="topology-status-dot" data-status-node="${node.id}" fill="var(--text3)"/>`;
+    // Entry point extra info
+    if (node.type === 'entrypoint') {
+      if (node.count) {
+        svg += `<text x="${nodeW / 2}" y="60" text-anchor="middle" font-size="20" font-weight="700" fill="white" opacity="0.9">${node.count}</text>`;
+        svg += `<text x="${nodeW / 2}" y="73" text-anchor="middle" font-size="9" fill="white" opacity="0.6">usuarios</text>`;
+      }
+      if (node.protocol) {
+        svg += `<text x="${nodeW / 2}" y="60" text-anchor="middle" font-size="10" fill="white" opacity="0.7">${node.protocol}</text>`;
+      }
+    }
 
-    // Mini metric (CPU + RAM, centered below IP)
-    svg += `<text x="${nodeW / 2}" y="${nodeH - 10}" class="topology-mini-metric" data-metric-node="${node.id}" text-anchor="middle" font-size="11" font-weight="600"></text>`;
+    // LB inactive indicator
+    if (isInactiveLB) {
+      svg += `<rect x="10" y="${nh - 28}" width="${nodeW - 20}" height="18" rx="4" fill="rgba(239,68,68,0.25)"/>`;
+      svg += `<text x="${nodeW / 2}" y="${nh - 15}" text-anchor="middle" font-size="9" font-weight="600" fill="#fca5a5" letter-spacing="0.5">INACTIVO</text>`;
+    }
+
+    // App chips (for server nodes)
+    if (node.type === 'app' && node.apps && node.apps.length) {
+      let appY = 60;
+      const maxApps = 6;
+      node.apps.slice(0, maxApps).forEach(app => {
+        const statusColor = app.status === 'active' ? '#10b981' :
+                            app.status === 'anomaly' ? '#f59e0b' :
+                            app.status === 'prepared' ? '#60a5fa' : '#6b7280';
+        svg += `<circle cx="14" cy="${appY}" r="3" fill="${statusColor}"/>`;
+        const portStr = app.port ? ` :${app.port}` : '';
+        svg += `<text x="22" y="${appY + 3}" font-size="8" fill="white" opacity="0.85">${app.name}${portStr}</text>`;
+        appY += 14;
+      });
+      if (node.apps.length > maxApps) {
+        svg += `<text x="22" y="${appY + 3}" font-size="7" fill="white" opacity="0.5">+${node.apps.length - maxApps} mas</text>`;
+      }
+    }
+
+    // Datasources (for DB node)
+    if (node.type === 'database' && node.datasources && node.datasources.length) {
+      let dsY = 58;
+      node.datasources.forEach(ds => {
+        svg += `<text x="14" y="${dsY}" font-size="7.5" fill="white" opacity="0.75">${ds.name}</text>`;
+        svg += `<text x="${nodeW - 14}" y="${dsY}" text-anchor="end" font-size="7" fill="white" opacity="0.5">pool ${ds.pool}</text>`;
+        dsY += 12;
+      });
+    }
+
+    // Anomalies indicator
+    if (node.anomalies && node.anomalies.length) {
+      svg += `<rect x="10" y="${nh - 28}" width="${nodeW - 20}" height="18" rx="4" fill="rgba(245,158,11,0.25)"/>`;
+      svg += `<text x="${nodeW / 2}" y="${nh - 15}" text-anchor="middle" font-size="7.5" font-weight="500" fill="#fbbf24">ANOMALIA</text>`;
+    }
+
+    // Status glow + dot (top-right)
+    if (node.type !== 'entrypoint') {
+      svg += `<circle cx="${nodeW - 14}" cy="14" r="10" class="topology-status-glow" data-glow-node="${node.id}" fill="var(--text3)" opacity="0.15"/>`;
+      svg += `<circle cx="${nodeW - 14}" cy="14" r="6" class="topology-status-dot" data-status-node="${node.id}" fill="var(--text3)"/>`;
+    }
+
+    // Mini metric
+    if (node.type === 'app' || node.type === 'database') {
+      svg += `<text x="${nodeW / 2}" y="${nh - 4}" class="topology-mini-metric" data-metric-node="${node.id}" text-anchor="middle" font-size="11" font-weight="600"></text>`;
+    }
 
     svg += '</g>';
   });
 
   svg += '</svg>';
 
-  // Build legend + status key
+  // Legend
   let legendHtml = '';
   try {
     const siteInfo = siteInfoData;
@@ -178,42 +291,41 @@ function renderTopologyDiagram() {
     }
   } catch(e) {}
 
-  // Status legend + zoom hint
   legendHtml += `<div class="topology-legend">
     <span class="topology-legend-item"><span class="topology-legend-dot" style="background:var(--green)"></span>Normal</span>
     <span class="topology-legend-item"><span class="topology-legend-dot" style="background:var(--yellow)"></span>Alerta</span>
     <span class="topology-legend-item"><span class="topology-legend-dot" style="background:var(--red)"></span>Critico</span>
+    <span class="topology-legend-item"><span class="topology-legend-dot" style="background:#60a5fa"></span>Preparado</span>
+    <span class="topology-legend-item"><span class="topology-legend-dot" style="background:#6b7280"></span>Inactivo</span>
     <span class="topology-legend-sep">|</span>
     <span class="topology-legend-hint">Scroll zoom · Arrastra · Doble-click reset</span>
   </div>`;
 
   container.innerHTML = svg + legendHtml;
 
-  // Entrance animation — staggered fade-in (opacity only, no transform to preserve SVG translate)
+  // Entrance animation
   const nodeEls = container.querySelectorAll('.topology-node');
   const edgeEls = container.querySelectorAll('.topology-edge');
 
-  // Start hidden
   edgeEls.forEach(e => { e.style.opacity = '0'; });
   nodeEls.forEach(n => { n.style.opacity = '0'; });
 
-  // Animate in
   requestAnimationFrame(() => {
     nodeEls.forEach((n, i) => {
       setTimeout(() => {
         n.style.transition = 'opacity 0.5s ease';
         n.style.opacity = '1';
-      }, i * 150);
+      }, i * 120);
     });
     edgeEls.forEach((e, i) => {
       setTimeout(() => {
         e.style.transition = 'opacity 0.6s ease';
         e.style.opacity = '1';
-      }, nodeEls.length * 150 + i * 120);
+      }, nodeEls.length * 120 + i * 80);
     });
   });
 
-  // ── Zoom & Pan (smooth, clamped) ──
+  // Zoom & Pan
   const svgEl = container.querySelector('.topology-svg');
   if (svgEl) {
     let scale = 1;
@@ -225,27 +337,21 @@ function renderTopologyDiagram() {
     const vbW = originalVB.width;
     const vbH = originalVB.height;
 
-    // Wheel zoom — gentle sensitivity
     container.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const delta = e.deltaY > 0 ? 1.04 : 0.96; // gentle steps
-      const newScale = Math.max(0.8, Math.min(2.5, scale * delta));
-
-      // Zoom toward cursor
+      const delta = e.deltaY > 0 ? 1.04 : 0.96;
+      const newScale = Math.max(0.6, Math.min(3, scale * delta));
       const rect = svgEl.getBoundingClientRect();
       const mouseX = (e.clientX - rect.left) / rect.width;
       const mouseY = (e.clientY - rect.top) / rect.height;
-
       const scaleDiff = newScale / scale;
       panX = mouseX * vbW * (1 - scaleDiff) + panX * scaleDiff;
       panY = mouseY * vbH * (1 - scaleDiff) + panY * scaleDiff;
-
       scale = newScale;
       clampPan();
       updateViewBox();
     }, { passive: false });
 
-    // Pan with mouse drag
     container.addEventListener('mousedown', (e) => {
       if (e.target.closest('.topology-node-clickable')) return;
       isPanning = true;
@@ -274,7 +380,6 @@ function renderTopologyDiagram() {
       }
     });
 
-    // Double-click to reset with smooth transition
     container.addEventListener('dblclick', (e) => {
       if (e.target.closest('.topology-node-clickable')) return;
       scale = 1;
@@ -286,7 +391,6 @@ function renderTopologyDiagram() {
     });
 
     function clampPan() {
-      // Don't let user pan beyond content bounds
       const w = vbW / scale;
       const h = vbH / scale;
       const maxPanX = vbW - w;
@@ -305,13 +409,16 @@ function renderTopologyDiagram() {
   }
 }
 
-function getNodeIcon(type) {
+function getNodeIcon(type, subtype) {
   const icons = {
     loadbalancer: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M6 12h12"/><path d="M8 8l4 4 4-4M8 16l4-4 4 4"/></svg>',
     app: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="6" cy="6" r="1" fill="var(--primary)"/><circle cx="6" cy="18" r="1" fill="var(--primary)"/></svg>',
     database: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>',
     storage: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.5"><path d="M17.5 19H9a7 7 0 110-14h.5"/><path d="M17.5 5a5.5 5.5 0 010 11h-2"/></svg>',
+    entrypoint: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>',
+    equipment: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.5"><rect x="4" y="4" width="16" height="12" rx="2"/><path d="M4 16l-2 4h20l-2-4"/><path d="M12 8v4M10 10h4"/></svg>',
   };
+  if (type === 'entrypoint' && subtype === 'equipment') return icons.equipment;
   return icons[type] || icons.app;
 }
 
@@ -325,23 +432,26 @@ function updateTopologyStatus(data) {
     if (!serverData || !serverData.length) return;
 
     const latest = serverData[serverData.length - 1];
-
     const cpuUsed = 100 - (latest.cpu_idle || 100);
     const memPct = latest.mem_total_mb > 0 ? (latest.mem_used_mb / latest.mem_total_mb * 100) : 0;
-    const color = cpuUsed > 85 ? 'var(--red)' : cpuUsed > 70 ? 'var(--yellow)' : 'var(--green)';
 
-    // Update status dot + glow
+    // Check for anomalies override
+    const srvConfig = window.SITE_CONFIG?.servers?.find(s => s.id === srv.id);
+    const hasAnomaly = srvConfig?.anomalies?.length > 0;
+
+    const color = hasAnomaly ? 'var(--yellow)' :
+                  cpuUsed > 85 ? 'var(--red)' : cpuUsed > 70 ? 'var(--yellow)' : 'var(--green)';
+
     const dot = document.querySelector(`[data-status-node="${srv.id}"]`);
     if (dot) dot.setAttribute('fill', color);
     const glow = document.querySelector(`[data-glow-node="${srv.id}"]`);
     if (glow) glow.setAttribute('fill', color);
 
-    // Update mini metric (2 values)
     const metric = document.querySelector(`[data-metric-node="${srv.id}"]`);
     if (metric) metric.textContent = `CPU ${cpuUsed.toFixed(0)}% · RAM ${memPct.toFixed(0)}%`;
   });
 
-  // Update DB node if exists
+  // DB node
   const rdsData = data.rds;
   if (rdsData && rdsData.length) {
     const latest = rdsData[rdsData.length - 1];
@@ -357,5 +467,14 @@ function updateTopologyStatus(data) {
     if (dbMetric) {
       dbMetric.textContent = `${latest.active_conns || 0} conns`;
     }
+  }
+
+  // LB node — always red if inactive
+  const lbNode = topologyData.nodes.find(n => n.id === 'lb');
+  if (lbNode && lbNode.status === 'inactive') {
+    const lbDot = document.querySelector('[data-status-node="lb"]');
+    if (lbDot) lbDot.setAttribute('fill', 'var(--red)');
+    const lbGlow = document.querySelector('[data-glow-node="lb"]');
+    if (lbGlow) lbGlow.setAttribute('fill', 'var(--red)');
   }
 }

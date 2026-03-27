@@ -44,7 +44,9 @@ function setView(name, params) {
     Promise.all([
       loadSiteInfo().catch(e => console.error('[Infographic]', e)),
       loadTopology().catch(e => console.error('[Topology]', e)),
-    ]);
+    ]).then(() => {
+      try { renderInfraStatusPanel(); } catch (e) { console.error('[InfraPanel]', e); }
+    });
   } else if (name === 'server-detail' && params?.serverId) {
     window.currentServerId = params.serverId;
     try {
