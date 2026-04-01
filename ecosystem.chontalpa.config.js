@@ -33,7 +33,7 @@ module.exports = {
         qa1: {
           host: "10.128.0.6",
           name: "QA1",
-          ip: "34.59.253.153",
+          ip: "34.72.141.54",
           diskGB: 10,
           memGB: 16,
           heapGB: 10,
@@ -48,7 +48,7 @@ module.exports = {
         qa2: {
           host: "10.128.0.4",
           name: "QA2",
-          ip: "34.172.222.164",
+          ip: "34.135.232.79",
           diskGB: 10,
           memGB: 16,
           heapGB: 10,
