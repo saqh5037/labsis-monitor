@@ -32,7 +32,7 @@ module.exports = {
         ],
         database: {
           label: "Cloud SQL PostgreSQL",
-          env: "Produccion",
+          env: "QA",
           host: "10.216.144.3",
           port: 5432,
           dbName: "labsis",
@@ -53,7 +53,7 @@ module.exports = {
           heapGB: 10,
           appPort: 8080,
           sshUser: "dynamtek",
-          role: "production",
+          role: "qa",
           jbossPath: "/home/dynamtek/jboss-4.2.3.GA/bin/run.sh",
           labsisCSV: "/tmp/labsis-monitor-vm-labsisqa1.csv",
           rdsCSV: "/tmp/rds-metrics.csv",
@@ -74,7 +74,7 @@ module.exports = {
           heapGB: 10,
           appPort: 8080,
           sshUser: "dynamtek",
-          role: "production",
+          role: "qa",
           jbossPath: "/home/dynamtek/jboss-4.2.3.GA/bin/run.sh",
           labsisCSV: "/tmp/labsis-monitor-vm-labsisqa2.csv",
           apps: [
