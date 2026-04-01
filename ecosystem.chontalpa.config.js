@@ -26,8 +26,22 @@ module.exports = {
         modules: ["Quimica", "Hematologia", "Inmunologia", "Microbiologia", "QC"]
       }),
       SITE_TOPOLOGY: JSON.stringify({
-        loadBalancer: { label: "GCP Load Balancer" },
-        database: { label: "Cloud SQL PostgreSQL", host: "10.216.144.3" }
+        entryPoints: [
+          { label: "Usuarios Chontalpa", type: "users", desc: "PCs / Navegadores" },
+          { label: "Equipos Analiticos", type: "equipment", protocol: "TCP/IP", desc: "Quimica, Hemato, Inmuno, Micro" }
+        ],
+        database: {
+          label: "Cloud SQL PostgreSQL",
+          env: "Produccion",
+          host: "10.216.144.3",
+          port: 5432,
+          dbName: "labsis",
+          datasources: [
+            { name: "labsisDatasource", pool: "10-60" },
+            { name: "labsisResultsDatasource", pool: "10-100" }
+          ]
+        },
+        storage: { label: "GCP Persistent Disk", desc: "10 GB por VM" }
       }),
       MONITOR_SERVERS: JSON.stringify({
         qa1: {
@@ -38,12 +52,18 @@ module.exports = {
           memGB: 16,
           heapGB: 10,
           appPort: 8080,
+          sshUser: "dynamtek",
+          role: "production",
           jbossPath: "/home/dynamtek/jboss-4.2.3.GA/bin/run.sh",
           labsisCSV: "/tmp/labsis-monitor-vm-labsisqa1.csv",
           rdsCSV: "/tmp/rds-metrics.csv",
           slowLog: "/tmp/rds-slow-queries.log",
           locksLog: "/tmp/rds-locks.log",
           idleTxLog: "/tmp/rds-idle-in-tx.log",
+          apps: [
+            { name: "JBoss 4.2.3", type: "jboss", port: 8080, heap: "10G", status: "active" },
+            { name: "labsis-monitor", type: "node", port: 3090, status: "active" }
+          ]
         },
         qa2: {
           host: "10.128.0.4",
@@ -53,8 +73,13 @@ module.exports = {
           memGB: 16,
           heapGB: 10,
           appPort: 8080,
+          sshUser: "dynamtek",
+          role: "production",
           jbossPath: "/home/dynamtek/jboss-4.2.3.GA/bin/run.sh",
           labsisCSV: "/tmp/labsis-monitor-vm-labsisqa2.csv",
+          apps: [
+            { name: "JBoss 4.2.3", type: "jboss", port: 8080, heap: "10G", status: "active" }
+          ]
         }
       }),
       SERVER_NAME_MAP: JSON.stringify({
