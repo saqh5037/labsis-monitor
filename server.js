@@ -8,6 +8,7 @@ const { EventDetector } = require('./lib/events');
 const { listActions, getAction } = require('./lib/actions');
 const { ActionExecutor } = require('./lib/action-executor');
 const { Auth } = require('./lib/auth');
+const { MiddleAgentClient } = require('./lib/middle-agent-client');
 
 const PORT = process.env.PORT || 3090;
 const BIND_HOST = process.env.BIND_HOST || '0.0.0.0';
@@ -41,6 +42,7 @@ const fetcher = new DataFetcher();
 const storage = new Storage();
 let eventDetector;
 let actionExecutor;
+let middleAgentClient;
 let auth;
 let anomalyDetector;
 let scheduler;
@@ -481,6 +483,17 @@ app.post('/api/reports/generate-client', async (req, res) => {
   }
 });
 
+// ── Interfaces middleware ──
+app.get('/api/interfaces/status', async (req, res) => {
+  if (!middleAgentClient) return res.json({ available: false, interfaces: [] });
+  try {
+    const result = await middleAgentClient.request('/interfaces/list', 'POST');
+    res.json({ available: true, connected: middleAgentClient.isConnected, ...result });
+  } catch (err) {
+    res.json({ available: false, connected: false, error: err.message, interfaces: [] });
+  }
+});
+
 // ── Broadcast ──
 function broadcast(data) {
   const payload = `data: ${JSON.stringify({ type: 'update', data })}\n\n`;
@@ -633,7 +646,22 @@ app.listen(PORT, BIND_HOST, async () => {
   storage.init();
   storage.initBackupTable();
   eventDetector = new EventDetector(storage);
-  actionExecutor = new ActionExecutor(fetcher, storage);
+
+  // Middle Agent client (interfaces Windows)
+  if (process.env.MIDDLE_AGENT_URL) {
+    middleAgentClient = new MiddleAgentClient(
+      process.env.MIDDLE_AGENT_URL,
+      process.env.MIDDLE_AGENT_TOKEN
+    );
+    console.log(`  Middle Agent: ${process.env.MIDDLE_AGENT_URL}`);
+    // Health check periodico
+    setInterval(async () => {
+      const health = await middleAgentClient.healthCheck();
+      if (!health) console.warn('[MiddleAgent] No disponible');
+    }, 60000);
+  }
+
+  actionExecutor = new ActionExecutor(fetcher, storage, middleAgentClient);
   auth = new Auth(storage);
   await auth.seedAdmin();
 

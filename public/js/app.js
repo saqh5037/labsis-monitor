@@ -156,6 +156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (tab.dataset.tab === 'actions') renderActionsTab();
       if (tab.dataset.tab === 'database') { try { loadHeatmap(); loadDbInsights(); } catch(e) {} }
       if (tab.dataset.tab === 'reports') { try { renderReportsTab(); } catch(e) {} }
+      if (tab.dataset.tab === 'interfaces') { try { renderInterfacesTab(); } catch(e) {} }
     });
   });
 

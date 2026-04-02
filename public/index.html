@@ -46,6 +46,7 @@
         <div id="topology-container"></div>
       </div>
       <div id="infra-status-panel"></div>
+      <div id="interfaces-overview-panel"></div>
       <div id="infographic-container"></div>
     </main>
   </section>
@@ -93,6 +94,7 @@
       <button class="nav-tab" data-tab="queries">Queries BD</button>
       <button class="nav-tab" data-tab="actions">Acciones</button>
       <button class="nav-tab" data-tab="reports">Reportes</button>
+      <button class="nav-tab" data-tab="interfaces">Interfaces</button>
     </div>
 
     <!-- TAB: Salud del Sistema -->
@@ -305,6 +307,13 @@
       </div>
     </div>
 
+    <!-- TAB: Interfaces Middleware -->
+    <div class="tab-panel" id="tab-interfaces">
+      <div id="interfaces-tab-container">
+        <div class="no-data">Cargando interfaces...</div>
+      </div>
+    </div>
+
     <!-- TAB: Reportes -->
     <div class="tab-panel" id="tab-reports">
       <div class="chart-title" style="margin-bottom:4px">Reportes para Entrega</div>
@@ -351,6 +360,7 @@
   <script src="js/car-dashboard.js"></script>
   <script src="js/ambient.js"></script>
   <script src="js/session-panel.js"></script>
+  <script src="js/interfaces-panel.js"></script>
   <script src="js/app.js"></script>
 
 </body>
