@@ -2059,6 +2059,79 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
   .sidebar .sidebar-label { opacity: 0; max-width: 0; }
 }
 
+/* ═══ Server Detail Cards + Collapsible Sections ═══ */
+.srv-detail-card {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 16px;
+}
+.srv-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.srv-detail-title { display: flex; flex-direction: column; gap: 2px; }
+.srv-detail-title strong { font-size: 16px; color: var(--navy); }
+.srv-detail-title span { font-family: var(--font-mono); font-size: 12px; color: var(--text3); }
+
+.srv-detail-sections { display: flex; flex-direction: column; gap: 8px; }
+
+.srv-section { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.srv-section[open] { box-shadow: var(--shadow); }
+
+.srv-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  border-left: 3px solid;
+  list-style: none;
+}
+.srv-section-header::-webkit-details-marker { display: none; }
+.srv-section-header svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+.srv-section-header.jboss { border-left-color: var(--green); background: rgba(5,150,105,0.04); }
+.srv-section-header.system { border-left-color: var(--primary); background: rgba(59,130,246,0.04); }
+.srv-section-header.connections { border-left-color: var(--cyan); background: rgba(6,182,212,0.04); }
+.srv-section-header.performance { border-left-color: var(--purple); background: rgba(139,92,246,0.04); }
+.srv-section-header.slow { border-left-color: var(--orange); background: rgba(249,115,22,0.04); }
+
+.srv-section-body { padding: 8px 16px 12px; }
+
+.svm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(15,23,42,0.03);
+}
+.svm-row:last-child { border-bottom: none; }
+.svm-label { font-size: 12px; color: var(--text2); min-width: 120px; }
+.svm-value {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+}
+.svm-value.svm-ok { color: var(--green); }
+.svm-value.svm-warn { color: var(--yellow); }
+.svm-value.svm-crit { color: var(--red); }
+.svm-unit { font-size: 11px; color: var(--text3); }
+
+[data-theme="dark"] .srv-detail-card { background: rgba(15,23,42,0.6); }
+[data-theme="dark"] .srv-detail-title strong { color: var(--text); }
+[data-theme="dark"] .srv-section { border-color: rgba(99,130,190,0.12); }
+[data-theme="dark"] .svm-row { border-bottom-color: rgba(255,255,255,0.04); }
+
 /* ═══ Overview Health Badge + Golden Signals ═══ */
 .health-banner {
   display: flex;

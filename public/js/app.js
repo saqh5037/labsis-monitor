@@ -8,12 +8,12 @@ let compareMode = false;
 let compareData = null;
 window.currentUser = null;
 window.SITE_CONFIG = null; // Se carga desde /api/site-config
-window.currentView = 'overview'; // 'overview' | 'dashboard' | 'server-detail' | 'docs'
+window.currentView = 'overview'; // 'overview' | 'servers' | 'database' | 'dashboard' | 'server-detail' | 'docs'
 window.currentServerId = null;
 
 // ── View System ──
 function setView(name, params) {
-  const views = ['overview', 'dashboard', 'server-detail', 'docs'];
+  const views = ['overview', 'servers', 'database', 'dashboard', 'server-detail', 'docs'];
   views.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.style.display = v === name ? '' : 'none';
@@ -47,6 +47,16 @@ function setView(name, params) {
     ]).then(() => {
       try { renderInfraStatusPanel(); } catch (e) { console.error('[InfraPanel]', e); }
     });
+  } else if (name === 'servers') {
+    window.currentServerId = null;
+    authFetch('api/data').then(r => r.json()).then(d => {
+      try { renderServersView(d); } catch(e) { console.error('[ServersView]', e); }
+    }).catch(() => {});
+  } else if (name === 'database') {
+    window.currentServerId = null;
+    authFetch('api/data').then(r => r.json()).then(d => {
+      try { renderDatabaseView(d); } catch(e) { console.error('[DatabaseView]', e); }
+    }).catch(() => {});
   } else if (name === 'server-detail' && params?.serverId) {
     window.currentServerId = params.serverId;
     try {
@@ -428,6 +438,8 @@ async function applyFilter(customFrom, customTo) {
 
 function updateDashboard(data) {
   try { renderOverviewHealth(data); } catch(e) {}
+  if (window.currentView === 'servers') { try { renderServersView(data); } catch(e) {} }
+  if (window.currentView === 'database') { try { renderDatabaseView(data); } catch(e) {} }
   renderCards(data);
   renderHealthPanel(data);
   renderAllCharts(data);

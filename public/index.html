@@ -35,6 +35,12 @@
         <button class="sidebar-item active" data-view="overview" onclick="setView('overview')">
           <i data-lucide="activity"></i><span class="sidebar-label">Overview</span>
         </button>
+        <button class="sidebar-item" data-view="servers" onclick="setView('servers')">
+          <i data-lucide="server"></i><span class="sidebar-label">Servidores</span>
+        </button>
+        <button class="sidebar-item" data-view="database" onclick="setView('database')">
+          <i data-lucide="database"></i><span class="sidebar-label">Base de Datos</span>
+        </button>
         <button class="sidebar-item" data-view="dashboard" onclick="setView('dashboard')">
           <i data-lucide="layout-dashboard"></i><span class="sidebar-label">Dashboard</span>
         </button>
@@ -68,6 +74,24 @@
       <div id="infra-status-panel"></div>
       <div id="interfaces-overview-panel"></div>
       <div id="infographic-container"></div>
+    </main>
+  </section>
+
+  <!-- ═══ VIEW: Servidores (JBoss + System + Connections) ═══ -->
+  <section id="view-servers" class="view-section" style="display:none">
+    <main class="main">
+      <div id="servers-view-container">
+        <div class="no-data">Cargando servidores...</div>
+      </div>
+    </main>
+  </section>
+
+  <!-- ═══ VIEW: Base de Datos (Charts + Queries + Heatmap) ═══ -->
+  <section id="view-database" class="view-section" style="display:none">
+    <main class="main">
+      <div id="database-view-container">
+        <div class="no-data">Cargando base de datos...</div>
+      </div>
     </main>
   </section>
 
@@ -400,6 +424,8 @@
   <script src="js/interfaces-panel.js"></script>
   <script src="js/docs-view.js"></script>
   <script src="js/overview-health.js"></script>
+  <script src="js/servers-view.js"></script>
+  <script src="js/database-view.js"></script>
   <script src="js/app.js"></script>
 
 </body>
