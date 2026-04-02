@@ -84,6 +84,59 @@ function renderOverviewHealth(data) {
         <div class="golden-lbl">Locks + Zombies</div>
       </div>
     </div>
+    <div class="server-cards">${servers.map(srv => {
+      const row = lastItem(data[srv.id]);
+      if (!row) return '';
+      const cpu = 100 - (row.cpu_idle || 100);
+      const mem = row.mem_total_mb > 0 ? (row.mem_used_mb / row.mem_total_mb * 100) : 0;
+      const jbossGB = (row.jboss_rss_mb || 0) / 1024;
+      const jbossMax = srv.heapGB || 12;
+      const jbossPct = Math.min((jbossGB / jbossMax) * 100, 100);
+      const threads = row.jboss_threads || 0;
+      const tcp = row.tcp8080_estab || 0;
+      const disk = row.disk_root_pct || 0;
+
+      function barCls(v, w, c) { return v >= c ? 'bar-crit' : v >= w ? 'bar-warn' : 'bar-good'; }
+      function dotCls() {
+        if (cpu > 85 || mem > 92) return 'dot-crit';
+        if (cpu > 70 || mem > 85) return 'dot-warn';
+        return 'dot-ok';
+      }
+
+      return `<div class="srv-card">
+        <div class="srv-card-header">
+          <span class="srv-dot ${dotCls()}"></span>
+          <span class="srv-name">${srv.name}</span>
+          <span class="srv-ip">${srv.host || ''}</span>
+        </div>
+        <div class="srv-metrics">
+          <div class="srv-metric">
+            <div class="srv-bar"><div class="srv-fill ${barCls(cpu,70,85)}" style="width:${cpu.toFixed(0)}%"></div></div>
+            <span class="srv-val">${cpu.toFixed(0)}%</span><span class="srv-lbl">CPU</span>
+          </div>
+          <div class="srv-metric">
+            <div class="srv-bar"><div class="srv-fill ${barCls(mem,85,92)}" style="width:${mem.toFixed(0)}%"></div></div>
+            <span class="srv-val">${mem.toFixed(0)}%</span><span class="srv-lbl">RAM</span>
+          </div>
+          <div class="srv-metric">
+            <div class="srv-bar"><div class="srv-fill ${barCls(jbossPct,75,90)}" style="width:${jbossPct.toFixed(0)}%"></div></div>
+            <span class="srv-val">${jbossGB.toFixed(1)}G</span><span class="srv-lbl">JBoss</span>
+          </div>
+          <div class="srv-metric">
+            <div class="srv-bar"><div class="srv-fill ${barCls(threads,200,300)}" style="width:${Math.min(threads/5, 100).toFixed(0)}%"></div></div>
+            <span class="srv-val">${threads}</span><span class="srv-lbl">Threads</span>
+          </div>
+          <div class="srv-metric">
+            <div class="srv-bar"><div class="srv-fill ${barCls(tcp,80,150)}" style="width:${Math.min(tcp/2, 100).toFixed(0)}%"></div></div>
+            <span class="srv-val">${tcp}</span><span class="srv-lbl">TCP</span>
+          </div>
+          <div class="srv-metric">
+            <div class="srv-bar"><div class="srv-fill ${barCls(disk,75,85)}" style="width:${disk}%"></div></div>
+            <span class="srv-val">${disk}%</span><span class="srv-lbl">Disco</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}</div>
   `;
 
   if (typeof lucide !== 'undefined') lucide.createIcons({ nodes: [container] });

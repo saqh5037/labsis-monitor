@@ -2151,8 +2151,81 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
   letter-spacing: 0.5px;
 }
 
+/* ═══ Server Cards ═══ */
+.server-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.srv-card {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+.srv-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.srv-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.srv-dot.dot-ok { background: var(--green); box-shadow: 0 0 6px rgba(5,150,105,0.4); }
+.srv-dot.dot-warn { background: var(--yellow); box-shadow: 0 0 6px rgba(217,119,6,0.4); }
+.srv-dot.dot-crit { background: var(--red); box-shadow: 0 0 6px rgba(220,38,38,0.4); }
+.srv-name { font-size: 14px; font-weight: 600; color: var(--navy); }
+.srv-ip {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text3);
+}
+.srv-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.srv-metric { display: flex; flex-direction: column; gap: 3px; }
+.srv-bar {
+  height: 4px;
+  background: rgba(15,23,42,0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.srv-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.srv-fill.bar-good { background: var(--green); }
+.srv-fill.bar-warn { background: var(--yellow); }
+.srv-fill.bar-crit { background: var(--red); }
+.srv-val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1;
+}
+.srv-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
 @media (max-width: 768px) {
   .golden-signals { grid-template-columns: repeat(2, 1fr); }
+  .srv-metrics { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ═══════════════════════════════════════════════════════
