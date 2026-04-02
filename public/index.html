@@ -17,35 +17,50 @@
     <div class="header-status">
       <span><span class="status-dot loading" id="conn-dot"></span><span id="conn-text">Conectando...</span></span>
       <span id="last-update">—</span>
-      <button class="theme-toggle" id="theme-toggle" title="Cambiar tema claro/oscuro">☀️</button>
+      <button class="theme-toggle" id="theme-toggle" title="Cambiar tema claro/oscuro"></button>
       <span class="user-badge" id="user-badge" style="display:none">
         <span id="user-name"></span>
         <span class="user-role-badge" id="user-role-badge"></span>
-        <button class="logout-btn" id="logout-btn" title="Cerrar sesión">Salir</button>
+        <button class="logout-btn" id="logout-btn" title="Cerrar sesion">Salir</button>
       </span>
     </div>
   </header>
 
-  <!-- View Navigation -->
-  <nav class="view-nav" id="view-nav">
-    <button class="view-nav-btn active" data-view="overview" onclick="setView('overview')">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-      Overview
-    </button>
-    <button class="view-nav-btn" data-view="dashboard" onclick="setView('dashboard')">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Dashboard Detallado
-    </button>
-    <button class="view-nav-btn" data-view="docs" onclick="setView('docs')">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      Documentaci&oacute;n
-    </button>
+  <!-- App Shell: sidebar + content -->
+  <div class="app-shell">
+
+    <!-- Left Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <nav class="sidebar-nav">
+        <button class="sidebar-item active" data-view="overview" onclick="setView('overview')">
+          <i data-lucide="activity"></i><span class="sidebar-label">Overview</span>
+        </button>
+        <button class="sidebar-item" data-view="dashboard" onclick="setView('dashboard')">
+          <i data-lucide="layout-dashboard"></i><span class="sidebar-label">Dashboard</span>
+        </button>
+        <button class="sidebar-item" data-view="docs" onclick="setView('docs')">
+          <i data-lucide="book-open"></i><span class="sidebar-label">Documentacion</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="sidebar-item" id="sidebar-collapse-btn" onclick="toggleSidebar()">
+          <i data-lucide="panel-left-close" id="sidebar-collapse-icon"></i><span class="sidebar-label">Colapsar</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Content Area -->
+    <div class="content-area">
+
     <span class="view-nav-breadcrumb" id="view-breadcrumb" style="display:none"></span>
-  </nav>
 
   <!-- ═══ VIEW: Overview (Topology first, then Infographic) ═══ -->
   <section id="view-overview" class="view-section">
     <main class="main">
+
+      <!-- Health Badge + Golden Signals -->
+      <div id="overview-health"></div>
+
       <div class="infographic-section">
         <h2 class="infographic-section-title">Arquitectura de Servidores</h2>
         <div id="topology-container"></div>
@@ -345,6 +360,9 @@
     </main>
   </section>
 
+    </div><!-- /content-area -->
+  </div><!-- /app-shell -->
+
   <!-- Modal para expandir gráficas -->
   <div class="chart-modal-overlay" id="chart-modal" style="display:none" onclick="closeChartModal(event)">
     <div class="chart-modal">
@@ -359,6 +377,7 @@
     </div>
   </div>
 
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
   <script src="js/utils.js"></script>
@@ -380,6 +399,7 @@
   <script src="js/session-panel.js"></script>
   <script src="js/interfaces-panel.js"></script>
   <script src="js/docs-view.js"></script>
+  <script src="js/overview-health.js"></script>
   <script src="js/app.js"></script>
 
 </body>

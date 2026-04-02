@@ -21,8 +21,8 @@ function setView(name, params) {
 
   window.currentView = name;
 
-  // Update nav buttons
-  document.querySelectorAll('.view-nav-btn').forEach(btn => {
+  // Update sidebar items
+  document.querySelectorAll('.sidebar-item[data-view]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.view === name);
   });
 
@@ -132,6 +132,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const ok = await checkAuth();
   if (!ok) return;
   updateUserBadge();
+
+  // Lucide icons
+  if (typeof lucide !== 'undefined') lucide.createIcons();
 
   // Logout
   const logoutBtn = document.getElementById('logout-btn');
@@ -424,6 +427,7 @@ async function applyFilter(customFrom, customTo) {
 }
 
 function updateDashboard(data) {
+  try { renderOverviewHealth(data); } catch(e) {}
   renderCards(data);
   renderHealthPanel(data);
   renderAllCharts(data);
@@ -648,4 +652,16 @@ function addCompareOverlay(chartId, rows, fields) {
     });
   });
   chart.update('none');
+}
+
+// ── Sidebar toggle ──
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  sidebar.classList.toggle('collapsed');
+  // Resize charts after sidebar transition
+  setTimeout(() => {
+    try { Object.values(charts).forEach(c => c.resize()); } catch(e) {}
+    try { window.dispatchEvent(new Event('resize')); } catch(e) {}
+  }, 250);
 }

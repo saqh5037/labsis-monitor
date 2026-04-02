@@ -1945,39 +1945,102 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
    VIEW SYSTEM — Navigation + View sections
    ═══════════════════════════════════════════════════════ */
 
-.view-nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 28px;
-  background: rgba(255,255,255,0.3);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 52px;
-  z-index: 99;
+/* ═══ App Shell — Sidebar + Content Grid ═══ */
+.app-shell {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  min-height: calc(100vh - 52px);
 }
 
-.view-nav-btn {
+.content-area {
+  min-width: 0; /* prevent grid blowout */
+  overflow-x: hidden;
+}
+
+/* ═══ Sidebar ═══ */
+.sidebar {
+  width: 200px;
+  height: calc(100vh - 52px);
+  position: sticky;
+  top: 52px;
+  background: rgba(255,255,255,0.4);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-right: 1px solid rgba(255,255,255,0.5);
+  box-shadow: 2px 0 16px rgba(30,58,95,0.04);
+  display: flex;
+  flex-direction: column;
+  padding: 12px 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: width 0.2s ease;
+  z-index: 90;
+}
+
+.sidebar.collapsed { width: 56px; }
+
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.15); border-radius: 99px; }
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
+  gap: 12px;
+  padding: 10px 14px;
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: 0 10px 10px 0;
+  background: none;
   color: var(--text2);
-  font: 500 13px/1 var(--font-sans);
+  font: 500 13px/1.2 var(--font-sans);
   cursor: pointer;
-  transition: all 0.2s;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  outline: none;
 }
-.view-nav-btn:hover { background: var(--bg-hover); color: var(--text); }
-.view-nav-btn.active {
+
+.sidebar-item:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.sidebar-item.active {
   background: var(--primary-bg);
   color: var(--primary);
-  border-color: rgba(59,130,246,0.15);
+  border-left-color: var(--primary);
   font-weight: 600;
+}
+
+.sidebar-item svg,
+.sidebar-item [data-lucide] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.sidebar-label {
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 1;
+  max-width: 140px;
+  transition: opacity 0.15s ease, max-width 0.2s ease;
+}
+
+.sidebar.collapsed .sidebar-label {
+  opacity: 0;
+  max-width: 0;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
 
 .view-nav-breadcrumb {
@@ -1986,10 +2049,111 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
   gap: 4px;
   color: var(--text2);
   font: 500 13px/1 var(--font-sans);
-  margin-left: 4px;
+  padding: 6px 20px;
 }
 
 .view-section { min-height: calc(100vh - 120px); }
+
+@media (max-width: 768px) {
+  .sidebar { width: 56px; }
+  .sidebar .sidebar-label { opacity: 0; max-width: 0; }
+}
+
+/* ═══ Overview Health Badge + Golden Signals ═══ */
+.health-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  margin-bottom: 20px;
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+.health-banner::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+}
+.health-banner.health-ok::before { background: var(--green); }
+.health-banner.health-warn::before { background: var(--yellow); }
+.health-banner.health-crit::before { background: var(--red); }
+
+.health-badge-icon {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.health-badge-icon svg { width: 22px; height: 22px; }
+.health-ok .health-badge-icon { background: var(--green-bg); color: var(--green); }
+.health-warn .health-badge-icon { background: var(--yellow-bg); color: var(--yellow); }
+.health-crit .health-badge-icon { background: var(--red-bg); color: var(--red); }
+
+.health-badge-text { display: flex; flex-direction: column; gap: 2px; }
+.health-badge-text strong {
+  font-size: 14px; font-weight: 700; letter-spacing: 0.5px;
+}
+.health-ok .health-badge-text strong { color: var(--green); }
+.health-warn .health-badge-text strong { color: var(--yellow); }
+.health-crit .health-badge-text strong { color: var(--red); }
+.health-badge-text span { font-size: 12px; color: var(--text2); }
+
+.golden-signals {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.golden-card {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+.golden-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.golden-card.g-good::before { background: var(--green); }
+.golden-card.g-warn::before { background: var(--yellow); }
+.golden-card.g-crit::before { background: var(--red); }
+
+.golden-val {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+.g-good .golden-val { color: var(--green); }
+.g-warn .golden-val { color: var(--yellow); }
+.g-crit .golden-val { color: var(--red); }
+
+.golden-lbl {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+  .golden-signals { grid-template-columns: repeat(2, 1fr); }
+}
 
 /* ═══════════════════════════════════════════════════════
    INFOGRAPHIC — Client info page
@@ -2392,15 +2556,17 @@ body, .header, .filter-bar, .card, .chart-card, .health-card {
    DARK THEME — New components
    ═══════════════════════════════════════════════════════ */
 
-[data-theme="dark"] .view-nav {
-  background: rgba(15,23,42,0.6);
-  border-bottom-color: rgba(99,130,190,0.08);
+[data-theme="dark"] .sidebar {
+  background: rgba(15,23,42,0.75);
+  border-right-color: rgba(99,130,190,0.15);
+  box-shadow: 2px 0 16px rgba(0,0,0,0.3);
 }
-[data-theme="dark"] .view-nav-btn { color: var(--text2); }
-[data-theme="dark"] .view-nav-btn:hover { background: rgba(59,130,246,0.08); }
-[data-theme="dark"] .view-nav-btn.active {
+[data-theme="dark"] .sidebar-item { color: var(--text2); }
+[data-theme="dark"] .sidebar-item:hover { background: rgba(59,130,246,0.08); }
+[data-theme="dark"] .sidebar-item.active {
   background: rgba(59,130,246,0.12);
-  border-color: rgba(96,165,250,0.15);
+  color: var(--primary);
+  border-left-color: var(--primary);
 }
 
 [data-theme="dark"] .infographic-executive {
