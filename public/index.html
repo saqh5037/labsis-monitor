@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/docs-view.css">
 </head>
 <body>
 
@@ -34,6 +35,10 @@
     <button class="view-nav-btn" data-view="dashboard" onclick="setView('dashboard')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Dashboard Detallado
+    </button>
+    <button class="view-nav-btn" data-view="docs" onclick="setView('docs')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Documentaci&oacute;n
     </button>
     <span class="view-nav-breadcrumb" id="view-breadcrumb" style="display:none"></span>
   </nav>
@@ -327,6 +332,19 @@
 
   </section> <!-- /view-dashboard -->
 
+  <!-- ═══ VIEW: Documentacion (SVG Viewer + Markdown) ═══ -->
+  <section id="view-docs" class="view-section" style="display:none">
+    <main class="main docs-layout">
+      <aside class="docs-sidebar" id="docs-sidebar"></aside>
+      <div class="docs-content" id="docs-content">
+        <div class="docs-loading">
+          <div class="docs-loading-spinner"></div>
+          <span>Cargando documentaci&oacute;n...</span>
+        </div>
+      </div>
+    </main>
+  </section>
+
   <!-- Modal para expandir gráficas -->
   <div class="chart-modal-overlay" id="chart-modal" style="display:none" onclick="closeChartModal(event)">
     <div class="chart-modal">
@@ -361,6 +379,7 @@
   <script src="js/ambient.js"></script>
   <script src="js/session-panel.js"></script>
   <script src="js/interfaces-panel.js"></script>
+  <script src="js/docs-view.js"></script>
   <script src="js/app.js"></script>
 
 </body>

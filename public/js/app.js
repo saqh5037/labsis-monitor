@@ -8,12 +8,12 @@ let compareMode = false;
 let compareData = null;
 window.currentUser = null;
 window.SITE_CONFIG = null; // Se carga desde /api/site-config
-window.currentView = 'overview'; // 'overview' | 'dashboard' | 'server-detail'
+window.currentView = 'overview'; // 'overview' | 'dashboard' | 'server-detail' | 'docs'
 window.currentServerId = null;
 
 // ── View System ──
 function setView(name, params) {
-  const views = ['overview', 'dashboard', 'server-detail'];
+  const views = ['overview', 'dashboard', 'server-detail', 'docs'];
   views.forEach(v => {
     const el = document.getElementById('view-' + v);
     if (el) el.style.display = v === name ? '' : 'none';
@@ -64,6 +64,9 @@ function setView(name, params) {
     setTimeout(() => {
       try { Object.values(charts).forEach(c => c.resize()); } catch (e) {}
     }, 100);
+  } else if (name === 'docs') {
+    window.currentServerId = null;
+    if (typeof initDocsView === 'function') initDocsView();
   }
 }
 

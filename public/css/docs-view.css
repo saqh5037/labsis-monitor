@@ -1,0 +1,450 @@
+/* ═══ Documentacion View — Liquid Glass ═══ */
+
+.docs-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  padding: 20px 28px;
+  min-height: calc(100vh - 120px);
+}
+
+/* ═══ Sidebar ═══ */
+.docs-sidebar {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 16px 0;
+  height: fit-content;
+  position: sticky;
+  top: 20px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+}
+
+.docs-sidebar-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text3);
+  padding: 0 16px 8px;
+  margin-bottom: 4px;
+}
+
+.docs-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-left: 3px solid transparent;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.docs-sidebar-item:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.docs-sidebar-item.active {
+  background: rgba(59,130,246,0.06);
+  color: var(--primary);
+  border-left-color: var(--primary);
+  font-weight: 600;
+}
+
+.docs-sidebar-item .sidebar-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.docs-sidebar-item.active .sidebar-icon { opacity: 1; }
+
+.docs-sidebar-item .sidebar-label { flex: 1; }
+
+.docs-sidebar-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 16px;
+}
+
+/* ═══ Content Area ═══ */
+.docs-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.docs-viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.docs-viewer-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.docs-viewer-desc {
+  font-size: 13px;
+  color: var(--text2);
+  margin-top: 2px;
+}
+
+/* ═══ SVG Viewer Container ═══ */
+.docs-svg-viewer {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+  height: calc(100vh - 240px);
+  min-height: 400px;
+  cursor: grab;
+}
+
+.docs-svg-viewer.panning { cursor: grabbing; }
+
+.docs-svg-viewer svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ═══ Zoom Controls ═══ */
+.docs-zoom-controls {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: var(--glass-border);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: var(--shadow-md);
+}
+
+.docs-zoom-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.docs-zoom-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.docs-zoom-btn.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.docs-zoom-level {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text3);
+  min-width: 42px;
+  justify-content: center;
+}
+
+.docs-zoom-hint {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  font-size: 11px;
+  color: var(--text3);
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: var(--glass-border);
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+/* ═══ Loading/Error States ═══ */
+.docs-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 12px;
+  color: var(--text3);
+}
+
+.docs-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: docs-spin 0.8s linear infinite;
+}
+
+@keyframes docs-spin {
+  to { transform: rotate(360deg); }
+}
+
+.docs-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 12px;
+  color: var(--text3);
+}
+
+.docs-error-icon {
+  font-size: 32px;
+  opacity: 0.5;
+}
+
+.docs-retry-btn {
+  padding: 8px 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--primary);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.docs-retry-btn:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* ═══ Markdown Content ═══ */
+.docs-markdown {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 28px 32px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.docs-markdown h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 24px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.docs-markdown h3:first-child { margin-top: 0; }
+
+.docs-markdown p { margin: 8px 0; }
+
+.docs-markdown strong { color: var(--text); font-weight: 600; }
+
+.docs-markdown ul, .docs-markdown ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.docs-markdown li { margin: 4px 0; }
+
+.docs-markdown code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--bg-code);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--primary);
+}
+
+.docs-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.docs-markdown th {
+  background: var(--bg-hover);
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border);
+}
+
+.docs-markdown td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.docs-markdown td code {
+  font-family: var(--font-mono);
+}
+
+/* ═══ PDF Download Cards ═══ */
+.docs-pdf-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.docs-pdf-card {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: var(--glass-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-decoration: none;
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+
+.docs-pdf-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+.docs-pdf-icon {
+  width: 44px;
+  height: 44px;
+  background: var(--red-bg);
+  color: var(--red);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 20px;
+}
+
+.docs-pdf-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.docs-pdf-name {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.docs-pdf-meta {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+
+/* ═══ Fullscreen Mode ═══ */
+.docs-svg-viewer.fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  border-radius: 0;
+  background: var(--bg);
+  height: 100vh;
+  min-height: unset;
+}
+
+.docs-fullscreen-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  border-radius: 10px;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--text2);
+  box-shadow: var(--shadow-md);
+  border: var(--glass-border);
+}
+
+.docs-svg-viewer.fullscreen .docs-fullscreen-close { display: flex; }
+
+/* ═══ Responsive ═══ */
+@media (max-width: 900px) {
+  .docs-layout {
+    grid-template-columns: 1fr;
+    padding: 12px 16px;
+  }
+  .docs-sidebar {
+    position: static;
+    max-height: none;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .docs-layout { padding: 8px 12px; }
+  .docs-markdown { padding: 16px 20px; }
+  .docs-zoom-hint { display: none; }
+  .docs-viewer-title { font-size: 15px; }
+}
+
+/* ═══ Dark Theme ═══ */
+[data-theme="dark"] .docs-svg-viewer {
+  background: rgba(30,41,59,0.7);
+}
+
+[data-theme="dark"] .docs-svg-viewer svg {
+  filter: none; /* SVGs keep their own colors/backgrounds */
+}
+
+[data-theme="dark"] .docs-markdown code {
+  background: rgba(30,41,59,0.5);
+}

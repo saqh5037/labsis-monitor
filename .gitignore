@@ -5,3 +5,6 @@ data/
 .env
 .DS_Store
 ecosystem.iner.config.js
+public/docs/pdf/
+middle-agent/
+reports/
