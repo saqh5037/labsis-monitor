@@ -8,18 +8,34 @@ let compareMode = false;
 let compareData = null;
 window.currentUser = null;
 window.SITE_CONFIG = null; // Se carga desde /api/site-config
-window.currentView = 'overview'; // 'overview' | 'servers' | 'database' | 'dashboard' | 'server-detail' | 'docs'
+window.currentView = 'overview'; // 'overview' | 'servers' | 'database' | 'operations' | 'reports' | 'server-detail'
 window.currentServerId = null;
 
 // ── View System ──
+// Sidebar section -> dashboard tab mapping
+// Each sidebar item shows the dashboard with the correct tab pre-selected
+const sidebarTabMap = {
+  servers: 'servers',
+  database: 'database',
+  operations: 'actions',
+  reports: 'reports',
+};
+
+// Also hide nav-tabs when coming from sidebar (cleaner look)
+// The user can still switch tabs within the dashboard
+
 function setView(name, params) {
-  const views = ['overview', 'servers', 'database', 'dashboard', 'server-detail', 'docs'];
-  views.forEach(v => {
+  const standalone = ['overview', 'server-detail', 'docs']; // vistas propias
+  const dashboard = document.getElementById('view-dashboard');
+
+  // Hide all standalone views
+  ['overview', 'server-detail', 'docs'].forEach(v => {
     const el = document.getElementById('view-' + v);
-    if (el) el.style.display = v === name ? '' : 'none';
+    if (el) el.style.display = 'none';
   });
 
   window.currentView = name;
+  window.currentServerId = null;
 
   // Update sidebar items
   document.querySelectorAll('.sidebar-item[data-view]').forEach(btn => {
@@ -38,45 +54,57 @@ function setView(name, params) {
     }
   }
 
-  // View-specific actions
   if (name === 'overview') {
-    window.currentServerId = null;
+    // Show overview, hide dashboard
+    document.getElementById('view-overview').style.display = '';
+    if (dashboard) dashboard.style.display = 'none';
     Promise.all([
       loadSiteInfo().catch(e => console.error('[Infographic]', e)),
       loadTopology().catch(e => console.error('[Topology]', e)),
     ]).then(() => {
       try { renderInfraStatusPanel(); } catch (e) { console.error('[InfraPanel]', e); }
     });
-  } else if (name === 'servers') {
-    window.currentServerId = null;
-    authFetch('api/data').then(r => r.json()).then(d => {
-      try { renderServersView(d); } catch(e) { console.error('[ServersView]', e); }
-    }).catch(() => {});
-  } else if (name === 'database') {
-    window.currentServerId = null;
-    authFetch('api/data').then(r => r.json()).then(d => {
-      try { renderDatabaseView(d); } catch(e) { console.error('[DatabaseView]', e); }
-    }).catch(() => {});
+
+  } else if (name === 'docs') {
+    document.getElementById('view-docs').style.display = '';
+    if (dashboard) dashboard.style.display = 'none';
+    if (typeof initDocsView === 'function') initDocsView();
+
   } else if (name === 'server-detail' && params?.serverId) {
+    // Show server detail, hide dashboard
+    document.getElementById('view-server-detail').style.display = '';
+    if (dashboard) dashboard.style.display = 'none';
     window.currentServerId = params.serverId;
     try {
       renderCarDashboard(params.serverId);
-      // Trigger initial data immediately (don't wait for next SSE tick)
       authFetch('api/data').then(r => r.json()).then(data => {
         updateCarDashboard(params.serverId, data);
-        // Also update topology status dots for when user goes back
         try { updateTopologyStatus(data); } catch(e) {}
       }).catch(() => {});
     } catch (e) { console.error('[CarDashboard]', e); }
-  } else if (name === 'dashboard') {
-    window.currentServerId = null;
-    // Resize charts after view switch
+
+  } else if (sidebarTabMap[name]) {
+    // Show dashboard with the correct tab pre-selected
+    if (dashboard) dashboard.style.display = '';
+
+    // Activate the right tab
+    const tabName = sidebarTabMap[name];
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    const tabBtn = document.querySelector(`.nav-tab[data-tab="${tabName}"]`);
+    const tabPanel = document.getElementById('tab-' + tabName);
+    if (tabBtn) tabBtn.classList.add('active');
+    if (tabPanel) tabPanel.classList.add('active');
+
+    // Trigger tab-specific inits
     setTimeout(() => {
-      try { Object.values(charts).forEach(c => c.resize()); } catch (e) {}
+      try { Object.values(charts).forEach(c => c.resize()); } catch(e) {}
     }, 100);
-  } else if (name === 'docs') {
-    window.currentServerId = null;
-    if (typeof initDocsView === 'function') initDocsView();
+    if (tabName === 'queries') try { fetchAndRenderQueries(); } catch(e) {}
+    if (tabName === 'actions') try { renderActionsTab(); } catch(e) {}
+    if (tabName === 'database') { try { loadHeatmap(); loadDbInsights(); } catch(e) {} }
+    if (tabName === 'reports') { try { renderReportsTab(); } catch(e) {} }
+    if (tabName === 'interfaces') { try { renderInterfacesTab(); } catch(e) {} }
   }
 }
 
@@ -168,11 +196,27 @@ document.addEventListener('DOMContentLoaded', async () => {
       setTimeout(() => {
         Object.values(charts).forEach(c => { try { c.resize(); } catch(e) {} });
       }, 50);
-      if (tab.dataset.tab === 'queries') fetchAndRenderQueries();
-      if (tab.dataset.tab === 'actions') renderActionsTab();
-      if (tab.dataset.tab === 'database') { try { loadHeatmap(); loadDbInsights(); } catch(e) {} }
-      if (tab.dataset.tab === 'reports') { try { renderReportsTab(); } catch(e) {} }
-      if (tab.dataset.tab === 'interfaces') { try { renderInterfacesTab(); } catch(e) {} }
+      // Consolidated tab triggers
+      if (tab.dataset.tab === 'metrics') {
+        // Show infra content too
+        const infra = document.getElementById('tab-infra');
+        if (infra) infra.style.display = '';
+        setTimeout(() => { Object.values(charts).forEach(c => { try { c.resize(); } catch(e) {} }); }, 100);
+      } else {
+        const infra = document.getElementById('tab-infra');
+        if (infra) infra.style.display = 'none';
+      }
+      if (tab.dataset.tab === 'database') {
+        try { fetchAndRenderQueries(); loadHeatmap(); loadDbInsights(); } catch(e) {}
+        const queries = document.getElementById('tab-queries');
+        if (queries) queries.style.display = '';
+      } else {
+        const queries = document.getElementById('tab-queries');
+        if (queries) queries.style.display = 'none';
+      }
+      if (tab.dataset.tab === 'actions') {
+        try { renderActionsTab(); renderReportsTab(); renderInterfacesTab(); } catch(e) {}
+      }
     });
   });
 
