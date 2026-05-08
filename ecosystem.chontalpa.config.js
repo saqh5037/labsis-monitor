@@ -47,9 +47,9 @@ module.exports = {
         qa1: {
           host: "10.128.0.6",
           name: "QA1",
-          ip: "34.72.141.54",
+          ip: "34.71.16.38",
           diskGB: 10,
-          memGB: 16,
+          memGB: 32,
           heapGB: 10,
           appPort: 8080,
           sshUser: "dynamtek",
@@ -68,9 +68,9 @@ module.exports = {
         qa2: {
           host: "10.128.0.4",
           name: "QA2",
-          ip: "34.135.232.79",
+          ip: "104.154.106.37",
           diskGB: 10,
-          memGB: 16,
+          memGB: 32,
           heapGB: 10,
           appPort: 8080,
           sshUser: "dynamtek",
@@ -80,11 +80,45 @@ module.exports = {
           apps: [
             { name: "JBoss 4.2.3", type: "jboss", port: 8080, heap: "10G", status: "active" }
           ]
+        },
+        qa3: {
+          host: "10.128.0.8",
+          name: "QA3",
+          ip: "35.238.150.44",
+          diskGB: 10,
+          memGB: 32,
+          heapGB: 10,
+          appPort: 8080,
+          sshUser: "dynamtek",
+          role: "qa",
+          jbossPath: "/home/dynamtek/jboss-4.2.3.GA/bin/run.sh",
+          labsisCSV: "/tmp/labsis-monitor-vm-labsisqa3.csv",
+          apps: [
+            { name: "JBoss 4.2.3", type: "jboss", port: 8080, heap: "10G", status: "active" }
+          ]
+        },
+        qa4: {
+          host: "10.128.0.9",
+          name: "QA4",
+          ip: "35.222.39.117",
+          diskGB: 10,
+          memGB: 32,
+          heapGB: 10,
+          appPort: 8080,
+          sshUser: "dynamtek",
+          role: "qa",
+          jbossPath: "/home/dynamtek/jboss-4.2.3.GA/bin/run.sh",
+          labsisCSV: "/tmp/labsis-monitor-vm-labsisqa4.csv",
+          apps: [
+            { name: "JBoss 4.2.3", type: "jboss", port: 8080, heap: "10G", status: "active" }
+          ]
         }
       }),
       SERVER_NAME_MAP: JSON.stringify({
         "10.128.0.6": "QA1",
-        "10.128.0.4": "QA2"
+        "10.128.0.4": "QA2",
+        "10.128.0.8": "QA3",
+        "10.128.0.9": "QA4"
       }),
       PATH: "/home/dynamtek/.nvm/versions/node/v22.22.1/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     },
