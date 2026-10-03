@@ -10,6 +10,8 @@ module.exports = {
       PORT: "3090",
       PG_PASSWORD: "labsis-lapi",
       SITE_NAME: "LAPI",
+      INTERFACE_FLOW_CHECK: "true",
+      INTERFACE_FLOW_QUEUES: "167:Checkin",
       CLIENT_INFO: JSON.stringify({
         name: "Laboratorio LAPI",
         shortName: "LAPI",

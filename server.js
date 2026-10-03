@@ -2,7 +2,8 @@ const express = require('express');
 const path = require('path');
 const { DataFetcher } = require('./lib/fetcher');
 const { Storage } = require('./lib/storage');
-const { fetchTopQueries, fetchActiveSessions, fetchActiveEquipment } = require('./lib/pg-queries');
+const { fetchTopQueries, fetchActiveSessions, fetchActiveEquipment, fetchInterfaceFlow } = require('./lib/pg-queries');
+const { createFlowEvaluator } = require('./lib/interface-flow');
 const { getStatus } = require('./lib/thresholds');
 const { EventDetector } = require('./lib/events');
 const { listActions, getAction } = require('./lib/actions');
@@ -14,6 +15,8 @@ const PORT = process.env.PORT || 3090;
 const BIND_HOST = process.env.BIND_HOST || '0.0.0.0';
 const FETCH_INTERVAL = 30000;
 const QUERIES_INTERVAL = 300000;
+const INTERFACE_FLOW_ENABLED = process.env.INTERFACE_FLOW_CHECK === 'true';
+const INTERFACE_FLOW_INTERVAL = parseInt(process.env.INTERFACE_FLOW_INTERVAL, 10) || 60000;
 
 // Servidores configurados (mismo parsing que fetcher.js)
 const SERVERS_CONFIG = process.env.MONITOR_SERVERS
@@ -46,6 +49,10 @@ let middleAgentClient;
 let auth;
 let anomalyDetector;
 let scheduler;
+let flowEvaluator;
+let flowRunning = false;
+let flowLastPurge = 0;
+let flowState = { available: false, checkedAt: null, queues: [], error: 'sin datos aún' };
 const sseClients = [];
 
 // Middleware
@@ -117,6 +124,7 @@ app.get('/api/me', (req, res) => {
 app.get('/api/site-config', (req, res) => {
   res.json({
     siteName: process.env.SITE_NAME || 'LAPI',
+    interfaceFlow: INTERFACE_FLOW_ENABLED,
     servers: Object.entries(SERVERS_CONFIG).map(([id, s]) => ({
       id,
       name: s.name || id,
@@ -494,6 +502,11 @@ app.get('/api/interfaces/status', async (req, res) => {
   }
 });
 
+app.get('/api/interfaces/flow', (req, res) => {
+  if (!INTERFACE_FLOW_ENABLED) return res.json({ enabled: false, available: false, checkedAt: null, queues: [] });
+  res.json({ enabled: true, ...flowState });
+});
+
 // ── Broadcast ──
 function broadcast(data) {
   const payload = `data: ${JSON.stringify({ type: 'update', data })}\n\n`;
@@ -558,6 +571,45 @@ async function fetchAndBroadcast(full = false) {
     console.log(`[Fetch] ${serverCounts} rds:${(data.rds || []).length} clients:${sseClients.length}`);
   } catch (err) {
     console.error('[Fetch] Error:', err.message);
+  }
+}
+
+// Flujo de colas de interfaces: ciclo propio, sin solaparse, solo lectura en BD.
+async function runInterfaceFlowCheck() {
+  if (flowRunning || !flowEvaluator) return;
+  flowRunning = true;
+  try {
+    const rows = await fetchInterfaceFlow();
+    const now = Date.now();
+    if (!rows) {
+      // Sin datos no hay base para alertar: degradar sin emitir crit.
+      flowState = { available: false, checkedAt: new Date(now).toISOString(), queues: flowState.queues, error: 'consulta a BD no disponible' };
+      console.warn('[InterfaceFlow] Consulta no disponible, se omite el ciclo');
+      broadcastEvent({ type: 'interfaces-flow', enabled: true, ...flowState });
+      return;
+    }
+    const { queues, events } = flowEvaluator.evaluate(rows, now);
+    const checkedAt = new Date(now).toISOString();
+    flowState = { available: true, checkedAt, queues };
+
+    for (const q of queues) storage.insertInterfaceFlowSnapshot(checkedAt, q);
+    if (now - flowLastPurge > 3600000) {
+      flowLastPurge = now;
+      const purged = storage.purgeInterfaceFlowSnapshots(30);
+      if (purged) console.log(`[InterfaceFlow] ${purged} snapshot(s) antiguos purgados`);
+    }
+
+    for (const ev of events) storage.insertEvent(ev.time, ev.level, ev.msg, ev.category);
+    // Mismo Notifier que EventDetector: un solo estado de antirrebote.
+    if (events.length && eventDetector && eventDetector.notifier) eventDetector.notifier.notify(events);
+
+    broadcastEvent({ type: 'interfaces-flow', enabled: true, ...flowState });
+    const summary = queues.map(q => `${q.equipoId}/${q.tipo}:${q.level} pend=${q.pending}`).join(' ');
+    console.log(`[InterfaceFlow] ${summary}${events.length ? ` (${events.length} evento(s))` : ''}`);
+  } catch (err) {
+    console.error('[InterfaceFlow] Error:', err.message);
+  } finally {
+    flowRunning = false;
   }
 }
 
@@ -645,6 +697,7 @@ app.listen(PORT, BIND_HOST, async () => {
 
   storage.init();
   storage.initBackupTable();
+  storage.initInterfaceFlowTable();
   eventDetector = new EventDetector(storage);
 
   // Middle Agent client (interfaces Windows)
@@ -736,6 +789,13 @@ app.listen(PORT, BIND_HOST, async () => {
   setInterval(() => fetchAndBroadcast(false), FETCH_INTERVAL);
   setInterval(() => fetchQueries(), QUERIES_INTERVAL);
   setInterval(() => fetchBackupStatus(), 1800000); // cada 30 min
+
+  if (INTERFACE_FLOW_ENABLED) {
+    flowEvaluator = createFlowEvaluator();
+    console.log(`[InterfaceFlow] Activo cada ${INTERFACE_FLOW_INTERVAL / 1000}s`);
+    runInterfaceFlowCheck();
+    setInterval(() => runInterfaceFlowCheck(), INTERFACE_FLOW_INTERVAL);
+  }
 });
 
 process.on('SIGINT', async () => {
