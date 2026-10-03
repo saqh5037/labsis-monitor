@@ -23,11 +23,27 @@
     'alphaweb-checkin':           ['AlphaWeb', 'SendCheckIn'],
   };
 
+  // Middle-agent interface id -> flow queue (equipoId + tipo as reported by api/interfaces/flow)
+  var FLOW_QUEUE_BY_INTERFACE = {
+    'alphaweb-checkin': { equipoId: 167, tipo: 'Checkin' },
+  };
+
+  var FLOW_LEVEL_LABEL = { ok: 'Fluyendo', warn: 'Atención', crit: 'Detenida' };
+
+  var FLOW_REASON_LABEL = {
+    stalled: 'Sin avance',
+    oldest:  'Pendiente antiguo',
+    reset:   'Posible reseteo masivo',
+    backlog: 'Acumulación',
+    orphans: 'Registros huérfanos (muestra inexistente)',
+  };
+
   // Max MB for gauge arc scale
   var MEM_MAX = 512;
 
   // Cached last data
   var lastInterfacesData = null;
+  var lastFlowData = null; // null = feature off / unreachable -> render nothing new
 
   // Refresh timer handle
   var refreshTimer = null;
@@ -89,6 +105,155 @@
     );
   }
 
+  // ── Flow helpers ──
+
+  function esc(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function formatDuration(sec) {
+    if (sec == null || isNaN(sec)) return '—';
+    sec = Math.max(0, Math.round(sec));
+    if (sec < 60) return sec + ' s';
+    var min = Math.floor(sec / 60);
+    if (min < 60) return min + ' min';
+    var h = Math.floor(min / 60);
+    var m = min % 60;
+    return m ? h + ' h ' + m + ' min' : h + ' h';
+  }
+
+  function formatLocalTime(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-MX');
+  }
+
+  function flowLevel(q) {
+    return q && FLOW_LEVEL_LABEL[q.level] ? q.level : 'warn';
+  }
+
+  function flowPill(q) {
+    var lvl = flowLevel(q);
+    return '<span class="intf-flow-pill ' + lvl + '">' + FLOW_LEVEL_LABEL[lvl] + '</span>';
+  }
+
+  function findFlowQueue(ifaceId) {
+    var m = FLOW_QUEUE_BY_INTERFACE[ifaceId];
+    if (!m || !lastFlowData || !lastFlowData.queues) return null;
+    for (var i = 0; i < lastFlowData.queues.length; i++) {
+      var q = lastFlowData.queues[i];
+      if (String(q.equipoId) === String(m.equipoId) && q.tipo === m.tipo) return q;
+    }
+    return null;
+  }
+
+  function flowInlinePill(ifaceId) {
+    var q = findFlowQueue(ifaceId);
+    return q ? '<div class="intf-flow-inline">' + flowPill(q) + '</div>' : '';
+  }
+
+  function flowQueueTitle(q) {
+    return esc(q.name || (q.tipo + ' · equipo ' + q.equipoId));
+  }
+
+  function flowReasons(q) {
+    return (q.reasons || []).map(function (r) { return FLOW_REASON_LABEL[r] || r; });
+  }
+
+  function flowStalledText(q) {
+    return q.stalledSec > 0 ? 'sin avance hace ' + formatDuration(q.stalledSec) : '';
+  }
+
+  function buildFlowStrip() {
+    var f = lastFlowData;
+    if (!f) return '';
+    var body;
+    if (!f.available) {
+      body = '<div class="intf-flow-empty">Sin datos de flujo (error de consulta)</div>';
+    } else if (!f.queues || !f.queues.length) {
+      return '';
+    } else {
+      body = '<div class="intf-flow-list">' + f.queues.map(function (q) {
+        var lvl = flowLevel(q);
+        var stalled = flowStalledText(q);
+        return (
+          '<div class="intf-flow-item ' + lvl + '">' +
+            '<div class="intf-flow-item-head">' +
+              '<span class="intf-flow-name">' + flowQueueTitle(q) + '</span>' +
+              flowPill(q) +
+            '</div>' +
+            '<div class="intf-flow-item-meta">' +
+              '<span>Pendientes: <strong>' + esc(q.pending) + '</strong></span>' +
+              '<span>Más antiguo: <strong>' + (q.pending > 0 ? formatDuration(q.oldestPendingSec) : '—') + '</strong></span>' +
+              (stalled ? '<span class="intf-flow-stalled">' + stalled + '</span>' : '') +
+            '</div>' +
+          '</div>'
+        );
+      }).join('') + '</div>';
+    }
+    return (
+      '<div class="intf-flow-strip" id="intf-flow-strip">' +
+        '<div class="intf-flow-title">Flujo de colas</div>' +
+        body +
+      '</div>'
+    );
+  }
+
+  function buildFlowSection() {
+    var f = lastFlowData;
+    if (!f) return '';
+    var head = (
+      '<div class="intf-tab-header intf-flow-section-header">' +
+        '<div class="chart-title">Flujo de colas</div>' +
+        '<div class="chart-desc">Procesando, no solo vivo: mide el avance real de las colas de envío. ' +
+          (f.checkedAt ? 'Última verificación: ' + esc(formatLocalTime(f.checkedAt)) + '.' : '') +
+        '</div>' +
+      '</div>'
+    );
+    if (!f.available) {
+      return '<div id="intf-flow-section">' + head +
+        '<div class="intf-flow-empty">Sin datos de flujo (error de consulta)</div></div>';
+    }
+    if (!f.queues || !f.queues.length) return '';
+    return (
+      '<div id="intf-flow-section">' + head +
+        '<div class="intf-detail-grid">' + f.queues.map(buildFlowDetailCard).join('') + '</div>' +
+      '</div>'
+    );
+  }
+
+  function buildFlowDetailCard(q) {
+    var lvl = flowLevel(q);
+    var reasons = flowReasons(q);
+    var reasonsHtml = reasons.length
+      ? reasons.map(function (r) { return '<span class="intf-flow-reason">' + esc(r) + '</span>'; }).join('')
+      : '—';
+    return (
+      '<div class="intf-detail-card intf-flow-card ' + lvl + '">' +
+        '<div class="intf-detail-header">' +
+          '<div class="intf-detail-name">' + flowQueueTitle(q) + '</div>' +
+          flowPill(q) +
+        '</div>' +
+        '<div class="intf-detail-body">' +
+          _detailRow('Equipo / tipo', esc(q.equipoId) + ' / ' + esc(q.tipo)) +
+          _detailRow('Pendientes', esc(q.pending)) +
+          _detailRow('Más antiguo', q.pending > 0 ? formatDuration(q.oldestPendingSec) : '—') +
+          _detailRow('Sin avance', q.stalledSec > 0 ? formatDuration(q.stalledSec) : '—') +
+          _detailRow('Enviados (ventana)', esc(q.sentInWindow)) +
+          _detailRow('Huérfanos', esc(q.orphans)) +
+          _detailRow('Primer pendiente (id)', q.firstPendingId != null ? esc(q.firstPendingId) : '—') +
+          _detailRow('Último avance', esc(formatLocalTime(q.lastProgressAt))) +
+          '<div class="intf-detail-row intf-flow-reasons-row">' +
+            '<span class="intf-detail-label">Motivos</span>' +
+            '<span class="intf-flow-reasons">' + reasonsHtml + '</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
   // ── Overview Panel ──
 
   function renderInterfacesOverview() {
@@ -110,6 +275,7 @@
           '<div class="intf-gauges-grid">' +
             _buildDisconnectedGauges() +
           '</div>' +
+          buildFlowStrip() +
         '</div>'
       );
       return;
@@ -131,6 +297,7 @@
         '<div class="intf-gauges-grid">' +
           ifaces.map(buildGaugeCard).join('') +
         '</div>' +
+        buildFlowStrip() +
         '<div class="intf-detail-link">' +
           '<button onclick="setView(\'dashboard\'); switchTab(\'interfaces\');">Ver detalle completo</button>' +
         '</div>' +
@@ -166,6 +333,7 @@
           '<span style="color:' + color + ';font-weight:700;font-size:10px;letter-spacing:.5px">' + statusText + '</span>' +
         '</div>' +
         '<div class="intf-gauge-meta">' + pidText + (running ? ' | ' + uptimeTrunc : '') + '</div>' +
+        flowInlinePill(iface.id) +
       '</div>'
     );
   }
@@ -215,7 +383,8 @@
           '<span class="intf-conn-dot"></span>' +
           'Agente no disponible — configura el agente Windows para ver datos' +
         '</div>' +
-        '<div class="no-data">Sin datos de interfaces</div>'
+        '<div class="no-data">Sin datos de interfaces</div>' +
+        buildFlowSection()
       );
       return;
     }
@@ -233,7 +402,8 @@
       '</div>' +
       '<div class="intf-detail-grid">' +
         ifaces.map(buildDetailCard).join('') +
-      '</div>'
+      '</div>' +
+      buildFlowSection()
     );
   }
 
@@ -254,6 +424,7 @@
           _detailRow('Memoria', running ? iface.memoryMB + ' MB' : '—') +
           _detailRow('Uptime', iface.uptime || '—') +
           _detailRow('Dirección', direction) +
+          (findFlowQueue(iface.id) ? _detailRow('Flujo', flowPill(findFlowQueue(iface.id))) : '') +
         '</div>' +
         '<div class="intf-detail-actions">' +
           '<button class="intf-action-btn" onclick="executeInterfaceAction(\'view_interface_logs\', \'' + iface.id + '\')">Ver Logs</button>' +
@@ -284,8 +455,23 @@
     } catch (e) {
       lastInterfacesData = { available: false, connected: false, interfaces: [] };
     }
+    await fetchFlowData();
     renderInterfacesOverview();
     renderInterfacesTab();
+  }
+
+  // Queue flow is additive: any failure or disabled feature leaves the panel as before
+  async function fetchFlowData() {
+    try {
+      var token = localStorage.getItem('token');
+      var headers = token ? { Authorization: 'Bearer ' + token } : {};
+      var res = await fetch('api/interfaces/flow', { headers: headers });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var json = await res.json();
+      lastFlowData = json && json.enabled ? json : null;
+    } catch (e) {
+      lastFlowData = null;
+    }
   }
 
   // ── switchTab (global helper used from buttons) ──

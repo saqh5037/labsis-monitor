@@ -51,6 +51,8 @@ evaluator covered with `node --test` (no new deps), `node --check`, local smoke 
       (flat in steady state); `sent` kept for display only.
 - [ ] T3 UI: flow status per queue in the existing interfaces panel ("vivo y procesando").
       Route: delegated UI writer (serial), then `/visual-iterate`.
+      Status: implemented, pending visual check (`/visual-iterate` at 360/768/1280, light+dark).
+      `node --check` ok; `npm test` 11/11 pass. Files: public/js/interfaces-panel.js, public/css/dashboard.css.
 - [ ] T4 Local smoke run against prod DB via tunnel (read-only) + report.
 
 ## Thresholds (initial, per monitored queue)
