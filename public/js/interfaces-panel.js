@@ -208,7 +208,7 @@
       '<div class="intf-tab-header intf-flow-section-header">' +
         '<div class="chart-title">Flujo de colas</div>' +
         '<div class="chart-desc">Procesando, no solo vivo: mide el avance real de las colas de envío. ' +
-          (f.checkedAt ? 'Última verificación: ' + esc(formatLocalTime(f.checkedAt)) + '.' : '') +
+          (f.checkedAt ? 'Última verificación: ' + esc(formatLocalTime(f.checkedAt)) : '') +
         '</div>' +
       '</div>'
     );
