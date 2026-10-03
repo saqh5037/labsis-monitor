@@ -49,11 +49,18 @@ evaluator covered with `node --test` (no new deps), `node --check`, local smoke 
       Notifier: reuses `eventDetector.notifier` (single cooldown state). No DB/SSH touched (T4 pending).
       Fix: progress measured by `max_sent_id` (highest sent id), not the windowed `sent` count
       (flat in steady state); `sent` kept for display only.
-- [ ] T3 UI: flow status per queue in the existing interfaces panel ("vivo y procesando").
+- [x] T3 UI: flow status per queue in the existing interfaces panel ("vivo y procesando").
       Route: delegated UI writer (serial), then `/visual-iterate`.
-      Status: implemented, pending visual check (`/visual-iterate` at 360/768/1280, light+dark).
+      Evidence: commits 9a53551 + db988e3. `/visual-iterate` 360/768/1280 light + 1280 dark, ok and
+      mocked crit states: no overflow, no text < 11px in the flow UI; fixes applied (crit/warn tint,
+      pill 10→11px, double period). Detail lives in Operaciones → pestaña Interfaces.
+      Known gap: the inline flow pill on the SendCheckIn gauge only renders when the middle-agent
+      is connected (not verifiable locally).
       `node --check` ok; `npm test` 11/11 pass. Files: public/js/interfaces-panel.js, public/css/dashboard.css.
-- [ ] T4 Local smoke run against prod DB via tunnel (read-only) + report.
+- [x] T4 Local smoke run against prod DB via tunnel (read-only) + report.
+      Evidence: local server with INTERFACE_FLOW_CHECK=true, MONITOR_SERVERS=[] (no server SSH);
+      log `[InterfaceFlow] 167/Checkin:ok pend=0` on every cycle, no events; browser console clean
+      except pre-existing favicon 404. Query cost: 43 ms (EXPLAIN ANALYZE, PK index scan).
 
 ## Thresholds (initial, per monitored queue)
 - crit `stalled`: pending > 0 and no sent progress and same first pending id for ≥ 10 min.
@@ -68,4 +75,6 @@ evaluator covered with `node --test` (no new deps), `node --check`, local smoke 
 - Check is off unless `INTERFACE_FLOW_CHECK=true`; query failure degrades, never crashes.
 
 ## Progress / next step
-Next: T3 (UI, serial writer + /visual-iterate), then T4 smoke via tunnel.
+All tasks done on branch `feat/interface-flow-health` (not pushed, not deployed).
+Next (human decisions): open PR; deploy to el18 `/home/dynamtek/lapi-dashboard` (backup + PM2
+restart with `--update-env`); create Telegram bot so crit alerts leave the screen.
