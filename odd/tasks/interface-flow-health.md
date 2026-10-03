@@ -75,6 +75,14 @@ evaluator covered with `node --test` (no new deps), `node --check`, local smoke 
 - Check is off unless `INTERFACE_FLOW_CHECK=true`; query failure degrades, never crashes.
 
 ## Progress / next step
-All tasks done on branch `feat/interface-flow-health` (not pushed, not deployed).
-Next (human decisions): open PR; deploy to el18 `/home/dynamtek/lapi-dashboard` (backup + PM2
-restart with `--update-env`); create Telegram bot so crit alerts leave the screen.
+All tasks done. PR: https://github.com/saqh5037/labsis-monitor/pull/1
+Deployed to el18 on 2026-10-03 14:03 (approved by Samuel):
+- Backup: /home/dynamtek/backups/lapi-dashboard_20261003_pre-flow.tgz (code only, 641 entries).
+- 8 files copied via scp; md5 verified against branch; `node --check` ok on server.
+- `pm2 delete lapi-dashboard && pm2 start ecosystem.config.js --only lapi-dashboard && pm2 save`
+  (pm2-restart-guard forbids `restart` for env changes). Online, 0 restarts, 95 MB, FLOW=true.
+- Logs: `[InterfaceFlow] 167/Checkin:ok pend=0` each minute; HTTP 302 (login) on :3090.
+- Rollback: extract the backup over /home/dynamtek/lapi-dashboard, then delete/start/save.
+Open debt found: `[Local] Error leyendo /tmp/labsis-monitor-ip-172-32-2-250.csv` since
+2026-09-10 (65,740 lines, pre-existing); `max_memory_restart: 150M` vs ~150 MB steady usage;
+Telegram bot still missing (alerts UI-only).
