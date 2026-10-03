@@ -8,7 +8,7 @@ const T0 = Date.parse('2026-10-02T14:26:00-06:00');
 function row(over = {}) {
   return {
     equipo: 167, tipo: 'Checkin', pend: 0, first_pend_id: null, oldest_pend_s: 0,
-    sent: 1000, max_id: 850000, orphans: 0, ...over,
+    sent: 1000, max_sent_id: 849990, max_id: 850000, orphans: 0, ...over,
   };
 }
 
@@ -30,7 +30,7 @@ test('healthy day produces no events', () => {
   let all = [];
   for (let i = 0; i < 120; i++) {
     // rows flow: a few pending with a moving head, sent grows, oldest age in seconds
-    const r = row({ pend: i % 3, first_pend_id: i % 3 ? 850000 + i : null, oldest_pend_s: i % 3 ? 4 : 0, sent: 1000 + i, max_id: 850000 + i });
+    const r = row({ pend: i % 3, first_pend_id: i % 3 ? 850000 + i : null, oldest_pend_s: i % 3 ? 4 : 0, sent: 1000, max_sent_id: 849990 + i, max_id: 850000 + i });
     const out = ev.evaluate([r], T0 + i * MIN);
     all = all.concat(out.events);
     assert.equal(out.queues[0].level, 'ok');
@@ -60,12 +60,12 @@ test('replay 2026-10-02: crit within 11 min, then single recovery event', () => 
   assert.match(stalled.msg, /Cola AlphaWeb Checkin detenida: 55 pendientes, sin envíos hace 10 min \(primer pendiente id 848483\)/);
   assert.equal(stalled.category, 'interfaces');
 
-  const rec = ev.evaluate([row({ pend: 0, sent: 1200, max_id: 848600 })], T0 + 12 * MIN);
+  const rec = ev.evaluate([row({ pend: 0, sent: 1200, max_sent_id: 848600, max_id: 848600 })], T0 + 12 * MIN);
   assert.equal(rec.events.length, 1);
   assert.equal(rec.events[0].level, 'ok');
   assert.equal(rec.queues[0].level, 'ok');
 
-  const again = ev.evaluate([row({ pend: 0, sent: 1201, max_id: 848601 })], T0 + 13 * MIN);
+  const again = ev.evaluate([row({ pend: 0, sent: 1201, max_sent_id: 848601, max_id: 848601 })], T0 + 13 * MIN);
   assert.equal(again.events.length, 0);
 });
 
@@ -113,11 +113,42 @@ test('string numerics from pg are coerced', () => {
 
 test('sent counter drop (sliding window) is not progress but resets baseline', () => {
   const ev = newEval();
-  ev.evaluate([row({ pend: 5, first_pend_id: 848483, sent: 1000 })], T0);
-  const drop = ev.evaluate([row({ pend: 5, first_pend_id: 848483, sent: 990 })], T0 + 5 * MIN);
+  ev.evaluate([row({ pend: 5, first_pend_id: 848483, max_sent_id: 848400 })], T0);
+  const drop = ev.evaluate([row({ pend: 5, first_pend_id: 848483, max_sent_id: 848300 })], T0 + 5 * MIN);
   assert.equal(drop.queues[0].stalledSec, 300);
-  const up = ev.evaluate([row({ pend: 5, first_pend_id: 848483, sent: 991 })], T0 + 6 * MIN);
+  const nul = ev.evaluate([row({ pend: 5, first_pend_id: 848483, max_sent_id: null })], T0 + 6 * MIN);
+  assert.equal(nul.queues[0].stalledSec, 360);
+  const base = ev.evaluate([row({ pend: 5, first_pend_id: 848483, max_sent_id: 848300 })], T0 + 7 * MIN);
+  assert.equal(base.queues[0].stalledSec, 420);
+  const up = ev.evaluate([row({ pend: 5, first_pend_id: 848483, max_sent_id: 848301 })], T0 + 8 * MIN);
   assert.equal(up.queues[0].stalledSec, 0);
+});
+
+test('steady flow: constant sent count but growing max_sent_id and moving head -> no events', () => {
+  const ev = newEval();
+  let all = [];
+  for (let i = 0; i < 60; i++) {
+    const out = ev.evaluate([row({
+      pend: 2, first_pend_id: 850000 + i, oldest_pend_s: 5,
+      sent: 20000, max_sent_id: 849990 + i, max_id: 850000 + i,
+    })], T0 + i * MIN);
+    all = all.concat(out.events);
+    assert.equal(out.queues[0].stalledSec, 0);
+  }
+  assert.equal(all.length, 0);
+});
+
+test('stalled only when max_sent_id is flat even if count changes', () => {
+  const ev = newEval();
+  let crit = null;
+  for (let i = 0; i <= 11; i++) {
+    const out = ev.evaluate([row({
+      pend: 3, first_pend_id: 848483, oldest_pend_s: 5,
+      sent: 20000 - i, max_sent_id: 848400, max_id: 850000 + i,
+    })], T0 + i * MIN);
+    if (crit === null && out.events.some(e => e.level === 'crit')) crit = i;
+  }
+  assert.equal(crit, 10);
 });
 
 test('missing queue in rows is healthy', () => {

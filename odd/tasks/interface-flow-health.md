@@ -47,6 +47,8 @@ evaluator covered with `node --test` (no new deps), `node --check`, local smoke 
       Evidence: commit 24e38aa; `node --check` ok on server.js, pg-queries.js, storage.js,
       interface-flow.js, ecosystem.config.js; `npm test` 9/9 pass; require smoke ok.
       Notifier: reuses `eventDetector.notifier` (single cooldown state). No DB/SSH touched (T4 pending).
+      Fix: progress measured by `max_sent_id` (highest sent id), not the windowed `sent` count
+      (flat in steady state); `sent` kept for display only.
 - [ ] T3 UI: flow status per queue in the existing interfaces panel ("vivo y procesando").
       Route: delegated UI writer (serial), then `/visual-iterate`.
 - [ ] T4 Local smoke run against prod DB via tunnel (read-only) + report.
